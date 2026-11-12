@@ -7,7 +7,7 @@ Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D
 | | |
 |---|---|
 | Live app | https://hongbao-mezo.pages.dev (no wallet needed to open or claim) |
-| Demo video | https://hongbao-mezo.pages.dev/video/ (1:44, app footage on live Mezo testnet) |
+| Demo video | https://youtu.be/KoJl0qOz5B4 (1:44, app footage on live Mezo testnet; also at https://hongbao-mezo.pages.dev/video/) |
 | Deck | https://hongbao-mezo.pages.dev/deck.pdf ([source](docs/deck/)) |
 | Track | Track 2: Access and distribution (Mezo Adoption) |
 | Contract | Mezo testnet [`0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4`](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4) (source verified); Mezo mainnet: capped beta, address added at launch |
