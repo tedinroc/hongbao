@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hongbao — Mezo Buildathon Wave 2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 16:9 slides, one per page when printed. Palette: red envelope, gold foil, warm paper, ink. */
+:root{--red:#A3121F;--red-deep:#6E0A14;--gold:#E3AE57;--gold-soft:#F4DDB0;--paper:#FBF6EE;--ink:#1D1514;--ink-2:#5B4D4A;--line:#E6D9C8;
+--disp:"Noto Serif TC","Songti TC",serif;--body:"Inter","Helvetica Neue",Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@page{size:1920px 1080px;margin:0}
+*{box-sizing:border-box}html,body{margin:0;background:#2b2120}
+body{font-family:var(--body);color:var(--ink)}
+.slide{width:1920px;height:1080px;position:relative;overflow:hidden;background:var(--paper);page-break-after:always;padding:110px 140px;display:flex;flex-direction:column;gap:40px}
+.slide.red{background:radial-gradient(1200px 700px at 78% 30%,#B8202D 0%,var(--red) 45%,var(--red-deep) 100%);color:#FFF6E8}
+.kicker{font-family:var(--mono);font-size:24px;letter-spacing:.14em;text-transform:uppercase;color:var(--red)}
+.red .kicker{color:var(--gold)}
+h1{font-family:var(--disp);font-weight:900;font-size:132px;line-height:1.02;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--disp);font-weight:900;font-size:76px;line-height:1.1;margin:0;max-width:1500px;text-wrap:balance}
+p,li{font-size:34px;line-height:1.45;margin:0;max-width:1400px}
+.sub{font-size:40px;color:var(--ink-2);max-width:1300px}
+.red .sub{color:#F6E2C9}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:36px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:34px 36px;display:flex;flex-direction:column;gap:14px}
+.card h3{font-size:36px;margin:0}
+.card p{font-size:28px;color:var(--ink-2)}
+.big{font-family:var(--mono);font-size:84px;font-weight:500;color:var(--red);line-height:1}
+.mono{font-family:var(--mono)}
+table{border-collapse:collapse;font-size:27px;width:100%}
+th,td{text-align:left;padding:14px 18px 14px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:22px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+td code{font-family:var(--mono);font-size:25px;color:var(--red)}
+.foot{position:absolute;left:140px;right:140px;bottom:56px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:20px;color:var(--ink-2)}
+.red .foot{color:#F2CFA7}
+.env{position:absolute;right:150px;top:170px;width:470px;height:640px;border-radius:28px;background:linear-gradient(180deg,#C42330,#8E0F1A);box-shadow:0 40px 80px rgba(0,0,0,.35)}
+.env:before{content:"";position:absolute;left:0;right:0;top:0;height:260px;background:#B11B27;border-radius:28px 28px 50% 50%/28px 28px 120px 120px;box-shadow:0 10px 0 rgba(0,0,0,.08)}
+.env:after{content:"福";position:absolute;left:50%;top:190px;transform:translateX(-50%);width:150px;height:150px;border-radius:50%;background:var(--gold);color:var(--red-deep);font-family:var(--disp);font-weight:900;font-size:92px;display:grid;place-items:center}
+.flow{display:flex;align-items:center;gap:22px;flex-wrap:wrap;font-size:28px}
+.node{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:18px 24px;font-weight:600}
+.node.m{border-color:var(--red);color:var(--red)}
+.arrow{font-family:var(--mono);color:var(--ink-2)}
+.shot{background:#EFE5D7;border:2px dashed #CDBBA3;border-radius:28px;display:grid;place-items:center;color:var(--ink-2);font-family:var(--mono);font-size:22px}
+.tag{display:inline-block;font-family:var(--mono);font-size:22px;padding:6px 14px;border-radius:999px;background:var(--gold-soft);color:var(--red-deep)}
+</style>
+</head>
+<body>
+
+<section class="slide red">
+  <div class="kicker">Mezo Buildathon · Wave 2 · Track 2</div>
+  <h1>Hongbao 紅包</h1>
+  <p class="sub" style="max-width:1000px">MUSD red packets that land in Mezo savings. One link; every friend who taps it gets a share already earning MEZO, with gas included.</p>
+  <div class="env" aria-hidden="true"></div>
+  <div class="foot"><span>【live link】</span><span>github.com/tedinroc/hongbao</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Problem</div>
+  <h2>The first step on Mezo is the hardest one.</h2>
+  <div class="grid3">
+    <div class="card"><div class="big">BTC</div><h3>Gas is BTC</h3><p>A new wallet that receives MUSD or MEZO cannot move it until it also gets BTC on Mezo.</p></div>
+    <div class="card"><div class="big">0</div><h3>No MUSD faucet</h3><p>Getting a first MUSD means bridging from Base or Ethereum, or borrowing.</p></div>
+    <div class="card"><div class="big">2,000</div><h3>Smallest loan, MUSD</h3><p>1,800 minimum debt plus a 200 MUSD gas deposit, so small users cannot borrow at all.</p></div>
+  </div>
+  <p class="sub">Meanwhile, small money already moves between friends every day, as red packets in group chats.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">Product</div>
+  <h2>Send a red packet. Your friends land inside Mezo savings.</h2>
+  <div class="grid3" style="flex:1">
+    <div class="shot">【screenshot: Send】</div>
+    <div class="shot">【screenshot: Claim — Earn MEZO / Save / Cash】</div>
+    <div class="shot">【screenshot: Opened — MEZO counter, Pass it on】</div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="kicker">How it works</div>
+  <h2>Built on Mezo, not next to it.</h2>
+  <div class="flow">
+    <span class="node">Sender</span><span class="arrow">MUSD permit · BTC · Mezo loan →</span>
+    <span class="node">Hongbao</span><span class="arrow">deposit →</span><span class="node m">MUSD Savings Rate vault</span>
+  </div>
+  <div class="flow">
+    <span class="node">Friend taps link</span><span class="arrow">signed claim →</span><span class="node">relayer</span><span class="arrow">claim →</span>
+    <span class="node m">VaultGauge.deposit(share, friend)</span><span class="arrow">+ BTC gas drip</span>
+  </div>
+  <table>
+    <tr><th>Mezo contract</th><th>Call</th><th>Why</th></tr>
+    <tr><td>MUSD Savings Rate (sMUSD)</td><td><code>deposit · withdraw · claimYield</code></td><td>Unclaimed packets earn savings yield</td></tr>
+    <tr><td>sMUSD VaultGauge</td><td><code>deposit(amount, recipient)</code></td><td>Each share is staked in the recipient's own name and earns MEZO</td></tr>
+    <tr><td>Tigris router + PriceFeed</td><td><code>swapExactTokensForTokens · fetchPrice</code></td><td>Fund with BTC at the oracle price; stale price reverts</td></tr>
+    <tr><td>BorrowerOperations + TroveManager</td><td><code>withdrawMUSD · getCurrentICR · maxBorrowingCapacity</code></td><td>Send straight from your Mezo loan, ratio checked first</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <div class="kicker">Why it creates MUSD demand</div>
+  <h2>Every packet is new MUSD, ending as staked sMUSD under a wallet that held nothing.</h2>
+  <div class="grid3">
+    <div class="card"><h3>New holders</h3><p>Recipients start with zero. Their first Mezo position is savings, not an idle balance.</p></div>
+    <div class="card"><h3>New reason to hold MUSD</h3><p>Gifts, onboarding budgets and community rewards, a use that does not exist on Mezo today.</p></div>
+    <div class="card"><h3>Loops back</h3><p>Recipients get gas, so they can claim MEZO, cash out, or pass a packet on to the next person.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Traction · public ledger</div>
+  <h2>Live on Mezo, with people outside the team.</h2>
+  <div class="grid3">
+    <div class="card"><div class="big">【N】</div><h3>packets</h3></div>
+    <div class="card"><div class="big">【K】</div><h3>distinct recipients</h3></div>
+    <div class="card"><div class="big">【S】</div><h3>outside senders with their own funding</h3></div>
+  </div>
+  <p class="sub">Every packet and claim, with team wallets tagged: 【ledger link】</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">Business model</div>
+  <h2>Small, honest fees. No gas subsidy.</h2>
+  <div class="grid3">
+    <div class="card"><div class="big">1%</div><h3>packet fee</h3><p>Paid in MUSD at creation.</p></div>
+    <div class="card"><div class="big">float</div><h3>savings yield</h3><p>Unclaimed packets earn the MUSD savings rate for the treasury.</p></div>
+    <div class="card"><div class="big">tip</div><h3>self-paying relays</h3><p>Each share carries a tiny BTC tip, so anyone can relay a claim at no cost to us.</p></div>
+  </div>
+  <p class="sub">Next: branded onboarding packets for Mezo projects and communities.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">Safety</div>
+  <h2>Nobody, including us, can move the money.</h2>
+  <div class="grid2">
+    <ul style="display:flex;flex-direction:column;gap:18px;padding-left:1em">
+      <li>No owner, no upgrade path. A guardian can only pause new packets and lower caps.</li>
+      <li>Sender can refund any time; anyone can return expired packets to the sender.</li>
+      <li>If the gauge or the vault refuses, recipients and senders are paid in kind.</li>
+      <li>Mainnet capped beta: 50 MUSD per packet, 500 outstanding.</li>
+    </ul>
+    <div class="card"><h3>Tested and reviewed</h3><p>【N】 Foundry tests incl. fuzzing and a conservation invariant; end-to-end on a Mezo testnet fork; three independent review passes with every finding fixed. Source verified on the Mezo explorer.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Roadmap · next 3 months</div>
+  <h2>From buildathon to Lunar New Year.</h2>
+  <table>
+    <tr><th>When</th><th>Milestone</th><th>Done when</th></tr>
+    <tr><td class="mono">Dec 2026</td><td>Mainnet public beta + Telegram bot that posts a live packet card</td><td>200+ distinct recipients</td></tr>
+    <tr><td class="mono">Jan 2027</td><td>Lunar New Year campaign (Feb 17, 2027), themes, scheduled and community packets</td><td>1,000+ recipients</td></tr>
+    <tr><td class="mono">Feb 2027</td><td>Trove-funded packets in one transaction, external review, Founder Program</td><td>Review published, caps raised</td></tr>
+  </table>
+</section>
+
+<section class="slide red">
+  <div class="kicker">Team</div>
+  <h2 style="color:#FFF6E8">Ted Chen — founder and sole developer</h2>
+  <p class="sub">Contracts, app, relayer, design. Built with AI coding assistance (Claude).</p>
+  <p class="sub">Try it: 【live link】 · Code: github.com/tedinroc/hongbao</p>
+  <div class="env" aria-hidden="true" style="transform:scale(.8);top:260px"></div>
+</section>
+
+</body>
+</html>

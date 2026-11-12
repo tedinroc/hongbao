@@ -1,0 +1,29 @@
+# Cloudflare Pages project for Hongbao (static SPA in dist/ + Pages Functions in functions/).
+# Deploy: npm run build && npx wrangler pages deploy
+# Secrets (never commit): npx wrangler pages secret put RELAYER_PRIVATE_KEY
+#                         npx wrangler pages secret put ATTESTER_PRIVATE_KEY
+name = "hongbao"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"
+# viem only needs Web APIs (fetch, crypto.subtle), so nodejs_compat is not required.
+
+[vars]
+# One-per-person packets (SPEC.md): at most 1 claim per packet per device id and per IP,
+# at most 10 relayed claims per IP per hour. IPv6 is counted per /64.
+# Raise LIMIT_IP_PER_PACKET for events where many people share one Wi-Fi.
+LIMIT_DEVICE_PER_PACKET = "1"
+LIMIT_IP_PER_PACKET = "1"
+LIMIT_IP_PER_HOUR = "10"
+# Refuse to relay if the network asks more than this per gas (wei). Mezo is ~1e6 wei.
+MAX_FEE_PER_GAS_WEI = "1000000000"
+# Optional overrides (normally read from config/deployments.json):
+# HONGBAO_31611 = "0x..."
+# DEPLOY_BLOCK_31611 = "..."
+# RPC_31611 = "https://rpc.test.mezo.org"
+# ALLOWED_ORIGINS = "http://localhost:5173"
+
+# Durable rate limits. Create once with `npx wrangler kv namespace create HB_LIMITS`
+# and paste the id here; without it limits fall back to per-isolate memory.
+# [[kv_namespaces]]
+# binding = "HB_LIMITS"
+# id = "<namespace id>"

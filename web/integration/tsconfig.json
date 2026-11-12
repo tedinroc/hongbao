@@ -1,0 +1,8 @@
+{
+  "//": "Type-check the cross-boundary tests: npx tsc -p integration/tsconfig.json",
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "@cloudflare/workers-types", "node"]
+  },
+  "include": ["./**/*.ts"]
+}

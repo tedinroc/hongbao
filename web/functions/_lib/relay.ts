@@ -1,0 +1,264 @@
+import {
+  BaseError,
+  Eip1559FeesNotSupportedError,
+  encodeFunctionData,
+  isAddressEqual,
+  keccak256,
+  type Address,
+  type Hex,
+  type PublicClient,
+  type TransactionSerializable,
+} from "viem";
+import { signTransaction, signTypedData } from "viem/accounts";
+import { PAYOUTS, ZERO_ADDRESS, hongbaoAbi, type PacketView } from "./abi";
+import { publicClient, type ChainId } from "./chains";
+import { chainEnabled, hongbaoAddress } from "./deployments";
+import { ATTEST_TTL, ATTEST_TYPES, hongbaoDomain } from "./eip712";
+import { attesterSigner, intVar, relayerSigner, type Env, type Signer } from "./env";
+import { ApiError, decodeRevert, logSafe, revertToApiError } from "./errors";
+import { hourBucket, limitsFor, reserve, type LimitRule } from "./limits";
+import type { ApiClaimResponse } from "./types";
+
+export interface ClaimInput {
+  chainId: ChainId;
+  packetId: bigint;
+  recipient: Address;
+  payout: 0 | 1 | 2;
+  keySig: Hex;
+  device: string | null;
+  ip: string;
+}
+
+/** A claim is ~300k gas; anything far above that is not a normal claim. */
+const MAX_CLAIM_GAS = 1_500_000n;
+const NONCE_RETRIES = 4;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function rpcError(err: unknown): ApiError {
+  console.error("[hongbao] rpc error:", logSafe(err));
+  return new ApiError("RpcError", 502);
+}
+
+/** Simulation / estimation failure → decoded contract error, else RPC error. */
+function callError(err: unknown): ApiError {
+  const d = decodeRevert(err);
+  if (d) return revertToApiError(d);
+  return rpcError(err);
+}
+
+function errText(err: unknown): string {
+  const parts: string[] = [];
+  let e: unknown = err;
+  for (let i = 0; i < 6 && e; i++) {
+    if (e instanceof BaseError) parts.push(e.shortMessage, e.details ?? "");
+    else if (e instanceof Error) parts.push(e.message);
+    e = (e as { cause?: unknown }).cause;
+  }
+  return parts.join(" | ").toLowerCase();
+}
+
+// One send at a time per relayer key within an isolate, so nonces do not collide
+// locally; collisions across isolates are retried below.
+const sendQueues = new Map<string, Promise<unknown>>();
+
+function serialized<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = sendQueues.get(key) ?? Promise.resolve();
+  const run = prev.catch(() => undefined).then(fn);
+  sendQueues.set(
+    key,
+    run.catch(() => undefined),
+  );
+  return run;
+}
+
+async function feeFields(client: PublicClient): Promise<{ fields: Partial<TransactionSerializable>; perGas: bigint }> {
+  try {
+    const f = await client.estimateFeesPerGas();
+    if (f.maxFeePerGas !== undefined && f.maxPriorityFeePerGas !== undefined) {
+      return {
+        fields: { type: "eip1559", maxFeePerGas: f.maxFeePerGas, maxPriorityFeePerGas: f.maxPriorityFeePerGas },
+        perGas: f.maxFeePerGas,
+      };
+    }
+  } catch (e) {
+    const notSupported = e instanceof BaseError && e.walk((x) => x instanceof Eip1559FeesNotSupportedError);
+    if (!notSupported) throw e;
+  }
+  const gasPrice = await client.getGasPrice();
+  return { fields: { type: "legacy", gasPrice }, perGas: gasPrice };
+}
+
+/**
+ * Sign and broadcast `claim` calldata to the Hongbao address. The destination
+ * and calldata are built here from typed arguments only; nothing from the
+ * request is forwarded as raw calldata.
+ */
+async function sendClaimTx(
+  env: Env,
+  client: PublicClient,
+  chainId: ChainId,
+  relayer: Signer,
+  hongbao: Address,
+  data: Hex,
+  gas: bigint,
+): Promise<Hex> {
+  const maxFee = BigInt(intVar(env.MAX_FEE_PER_GAS_WEI, 1_000_000_000, 1, 1_000_000_000_000));
+  return serialized(`${chainId}:${relayer.address}`, async () => {
+    for (let attempt = 0; ; attempt++) {
+      let nonce: number;
+      let fees: Awaited<ReturnType<typeof feeFields>>;
+      let balance: bigint;
+      try {
+        [nonce, fees, balance] = await Promise.all([
+          client.getTransactionCount({ address: relayer.address, blockTag: "pending" }),
+          feeFields(client),
+          client.getBalance({ address: relayer.address }),
+        ]);
+      } catch (e) {
+        throw rpcError(e);
+      }
+      if (fees.perGas > maxFee) throw new ApiError("GasPriceTooHigh", 503);
+      if (balance < gas * fees.perGas) {
+        console.error("[hongbao] relayer balance too low on chain", chainId);
+        throw new ApiError("RelayerOutOfGas", 503);
+      }
+      const tx = { ...fees.fields, chainId, nonce, to: hongbao, data, gas, value: 0n } as TransactionSerializable;
+      const raw = await signTransaction({ privateKey: relayer.privateKey, transaction: tx });
+      const hash = keccak256(raw);
+      try {
+        await client.sendRawTransaction({ serializedTransaction: raw });
+        return hash;
+      } catch (e) {
+        const t = errText(e);
+        if (/already known|known transaction|already imported|tx already in mempool/.test(t)) return hash;
+        if (/insufficient funds/.test(t)) throw new ApiError("RelayerOutOfGas", 503);
+        if (/nonce|sequence|replacement transaction underpriced/.test(t) && attempt + 1 < NONCE_RETRIES) {
+          await sleep(200 * (attempt + 1) + Math.floor(Math.random() * 200));
+          continue;
+        }
+        console.error("[hongbao] send failed:", logSafe(e));
+        throw new ApiError("SendFailed", 502);
+      }
+    }
+  });
+}
+
+export async function relayClaim(env: Env, input: ClaimInput): Promise<ApiClaimResponse> {
+  const { chainId, packetId, recipient, payout, keySig, device, ip } = input;
+
+  if (!chainEnabled(env, chainId)) throw new ApiError("ChainDisabled", 503);
+  const hongbao = hongbaoAddress(env, chainId) as Address;
+  const relayer = relayerSigner(env);
+  if (!relayer) throw new ApiError("RelayerNotConfigured", 503);
+  if (isAddressEqual(recipient, ZERO_ADDRESS)) throw new ApiError("ZeroAddress", 400);
+  if (isAddressEqual(recipient, hongbao)) throw new ApiError("BadRequest", 400, "recipient: cannot be the Hongbao contract", { field: "recipient" });
+
+  const client = publicClient(env, chainId);
+
+  // 1. Read the packet.
+  let packet: PacketView;
+  let already: boolean;
+  let blockTs: bigint;
+  try {
+    const [p, c, b] = await Promise.all([
+      client.readContract({ address: hongbao, abi: hongbaoAbi, functionName: "getPacket", args: [packetId] }),
+      client.readContract({ address: hongbao, abi: hongbaoAbi, functionName: "claimed", args: [packetId, recipient] }),
+      client.getBlock({ blockTag: "latest" }),
+    ]);
+    packet = p as PacketView;
+    already = c as boolean;
+    blockTs = b.timestamp;
+  } catch (e) {
+    throw callError(e);
+  }
+  if (isAddressEqual(packet.sender, ZERO_ADDRESS)) throw new ApiError("UnknownPacket", 404);
+  if (packet.refunded || packet.sharesLeft === 0) throw new ApiError("PacketClosed", 410);
+  if (blockTs >= packet.expiry) throw new ApiError("Expired", 410);
+  if (already) throw new ApiError("AlreadyClaimed", 409);
+
+  // 2. Rate limits (+ attestation for one-per-person packets that name our attester).
+  const limits = limitsFor(env);
+  const hour = hourBucket();
+  const rules: LimitRule[] = [{ name: "ip-per-hour", parts: [ip, hour.bucket], limit: limits.ipPerHour, exp: hour.exp }];
+  let attester: Signer | null = null;
+  if (!isAddressEqual(packet.attester, ZERO_ADDRESS)) {
+    attester = attesterSigner(env);
+    if (!attester) throw new ApiError("AttesterNotConfigured", 503);
+    if (!isAddressEqual(packet.attester, attester.address)) throw new ApiError("ForeignAttester", 409);
+    if (!device) throw new ApiError("DeviceRequired", 400, undefined, { field: "device" });
+    const scope = [String(chainId), hongbao.toLowerCase(), packetId.toString()];
+    const exp = Math.min(Number(packet.expiry) + 3600, Math.floor(Date.now() / 1000) + 31 * 86_400);
+    rules.push(
+      { name: "device-per-packet", parts: [...scope, device], limit: limits.devicePerPacket, exp },
+      { name: "ip-per-packet", parts: [...scope, ip], limit: limits.ipPerPacket, exp },
+    );
+  }
+  const reservation = await reserve(env, rules);
+
+  try {
+    let attestDeadline = 0n;
+    let attestSig: Hex = "0x";
+    if (attester) {
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      attestDeadline = (now > blockTs ? now : blockTs) + BigInt(ATTEST_TTL);
+      attestSig = await signTypedData({
+        privateKey: attester.privateKey,
+        domain: hongbaoDomain(chainId, hongbao),
+        types: ATTEST_TYPES,
+        primaryType: "Attest",
+        message: { packetId, recipient, deadline: attestDeadline },
+      });
+    }
+    const args = [packetId, recipient, payout, keySig, attestDeadline, attestSig] as const;
+
+    // 3. Simulate from the relayer address; a revert comes back as its custom-error name.
+    let amount: bigint;
+    let paid: number;
+    try {
+      const sim = await client.simulateContract({
+        address: hongbao,
+        abi: hongbaoAbi,
+        functionName: "claim",
+        args,
+        account: relayer.address,
+      });
+      [amount, paid] = sim.result as unknown as [bigint, number];
+    } catch (e) {
+      throw callError(e);
+    }
+
+    // 4. Gas limit = estimate × 1.3.
+    let gas: bigint;
+    try {
+      gas = await client.estimateContractGas({
+        address: hongbao,
+        abi: hongbaoAbi,
+        functionName: "claim",
+        args,
+        account: relayer.address,
+      });
+    } catch (e) {
+      throw callError(e);
+    }
+    gas = (gas * 13n) / 10n;
+    if (gas > MAX_CLAIM_GAS) throw new ApiError("GasLimitTooHigh", 422);
+
+    // 5. Send; the client waits for the receipt.
+    const data = encodeFunctionData({ abi: hongbaoAbi, functionName: "claim", args });
+    const txHash = await sendClaimTx(env, client, chainId, relayer, hongbao, data, gas);
+
+    return {
+      txHash,
+      chainId,
+      packetId: packetId.toString(),
+      recipient,
+      relayer: relayer.address,
+      attested: attester !== null,
+      expected: { amount: amount.toString(), payout: PAYOUTS[paid] ?? "Save" },
+    };
+  } catch (e) {
+    await reservation.release();
+    throw e;
+  }
+}

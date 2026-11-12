@@ -10,3 +10,10 @@ dist/
 .wrangler/
 .DS_Store
 abi/*.sol.txt
+private/
+*.tsbuildinfo
+contracts/broadcast/**/dry-run/
+contracts/test/audit_*/
+web/.wrangler/
+raw/
+video/

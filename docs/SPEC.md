@@ -95,3 +95,26 @@ Copy rules: plain words, active voice, the button says what happens ("Open the r
 - Unit tests for the signing helpers (EIP-712 digest must equal the contract's `claimDigest`; there is a Foundry test vector you can reproduce: compute with viem and compare against `cast call <hongbao> "claimDigest(uint256,address,uint8)"` once deployed, or against an anvil deployment).
 - Never log or send the link private key or the wallet private key anywhere.
 - All external fetches go to the Mezo RPCs and our own `/api`.
+
+## Phase 2: "Fund from my Mezo loan" (Send page)
+
+The judge repeatedly asked payment-style projects to let a sender who is short of MUSD borrow it from their own Mezo trove inside the same flow. No contract change: the app does two transactions from the sender's wallet.
+
+1. Detect a trove: `TroveManager.getTroveStatus(sender) == 1` (active). Read `getEntireDebtAndColl(sender)` → `(principal, interest, coll, pendingPrincipal, pendingInterest, pendingColl)` — note pending values are already folded in; do not double count. Read `PriceFeed.fetchPrice()`, `getCurrentICR(sender, price)`, `getTroveMaxBorrowingCapacity(sender)`, `checkRecoveryMode(price)`, `BorrowerOperations.getBorrowingFee(amount)`.
+2. Show the loan before/after: debt, collateral, ICR now → ICR after borrowing `amount + fee`, the liquidation price after, and the remaining borrowing capacity. Block the action when: Recovery Mode is on; the new ICR would be below a user-visible floor (default 160%, never below 150%); `debt + amount + fee > maxBorrowingCapacity`.
+3. Hints: `NICR = HintHelpers.computeNominalCR(coll, newDebt)`; `(approx) = HintHelpers.getApproxHint(NICR, 15, randomSeed)`; `(upper, lower) = SortedTroves.findInsertPosition(NICR, approx, approx)`.
+4. Tx 1: `BorrowerOperations.withdrawMUSD(amount, upper, lower)` (MUSD lands in the sender's own wallet, so a failed second step loses nothing). Tx 2: the normal `createWithPermit`.
+5. Explain in one sentence that this adds to their loan at Mezo's fixed rate and that MUSD loans can be redeemed against when their ratio is among the lowest.
+
+ABIs: `shared/mezo-trove-abis.json`. Addresses:
+
+| | testnet 31611 | mainnet 31612 |
+|---|---|---|
+| BorrowerOperations | 0xCdF7028ceAB81fA0C6971208e83fa7872994beE5 | 0x44b1bac67dDA612a41a58AAf779143B181dEe031 |
+| TroveManager | 0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0 | 0x94AfB503dBca74aC3E4929BACEeDfCe19B93c193 |
+| HintHelpers | 0x4e4cBA3779d56386ED43631b4dCD6d8EacEcBCF6 | 0xD267b3bE2514375A075fd03C3D9CBa6b95317DC3 |
+| SortedTroves | 0x722E4D24FD6Ff8b0AC679450F3D91294607268fA | 0x8C5DB4C62BF29c1C4564390d10c20a47E0b2749f |
+
+## Phase 2: sharing
+
+The link must be channel-agnostic. Share buttons in this order: Telegram (`https://t.me/share/url?url=<link>&text=<msg>`), WhatsApp (`https://wa.me/?text=<msg+link>`), LINE (`https://line.me/R/share?text=<msg+link>`), copy link, QR, and `navigator.share` when available. Mezo's community lives on Telegram and Discord, so Telegram is the primary button.

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "generatedAt": null,
+  "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
+  "chains": {
+    "31611": {
+      "stats": { "packets": "0", "claims": "0", "volume": "0", "recipients": "0", "senders": "0", "open": "0" },
+      "recent": []
+    },
+    "31612": {
+      "stats": { "packets": "0", "claims": "0", "volume": "0", "recipients": "0", "senders": "0", "open": "0" },
+      "recent": []
+    }
+  }
+}

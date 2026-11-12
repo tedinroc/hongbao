@@ -1,0 +1,6 @@
+# SPA fallback for client-side routes. Pages Functions under /api are matched first.
+# Targets are "/" (not /index.html) so Pages' .html/index stripping cannot loop.
+/send      /  200
+/me        /  200
+/ledger    /  200
+/c/*       /  200
