@@ -1,0 +1,4 @@
+{
+  "31611": { "name": "Mezo testnet", "hongbao": null, "deployBlock": null, "enabled": true },
+  "31612": { "name": "Mezo mainnet", "hongbao": null, "deployBlock": null, "enabled": false }
+}

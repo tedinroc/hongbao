@@ -1,0 +1,6 @@
+{
+  "note": "Wallets controlled by the Hongbao team. The public ledger tags these as team; every other address is outside.",
+  "wallets": [
+    { "address": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54", "label": "testnet deployer / relayer" }
+  ]
+}
