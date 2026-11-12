@@ -24,6 +24,14 @@
     {
       "address": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
       "label": "mainnet relayer"
+    },
+    {
+      "address": "0x9bfD25e1658923804EBFE471993Bba7Bbf0E23CA",
+      "label": "testnet video sender (funds packets from a Mezo loan)"
+    },
+    {
+      "address": "0xDbfB12E7b9F94723828C4bc66CB3D06B306dCB4E",
+      "label": "test recipient (video claim)"
     }
   ]
 }

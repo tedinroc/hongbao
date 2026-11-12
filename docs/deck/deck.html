@@ -1,163 +1,411 @@
 <!doctype html>
+<!-- Template for the Hongbao pitch deck. Do not open this file directly: `node docs/deck/build.mjs` fills the
+     double-brace tokens from docs/proof.json and the live /api/stats, writes Hongbao-deck.html and prints docs/Hongbao-deck.pdf. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <title>Hongbao — Mezo Buildathon Wave 2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@700;900&family=Noto+Serif+TC:wght@700;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=block">
 <style>
-/* 16:9 slides, one per page when printed. Palette: red envelope, gold foil, warm paper, ink. */
-:root{--red:#A3121F;--red-deep:#6E0A14;--gold:#E3AE57;--gold-soft:#F4DDB0;--paper:#FBF6EE;--ink:#1D1514;--ink-2:#5B4D4A;--line:#E6D9C8;
---disp:"Noto Serif TC","Songti TC",serif;--body:"Inter","Helvetica Neue",Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+/* 1920x1080 slides, one per printed page. The app's palette: red envelope, warm gold, warm paper, ink. */
+:root{
+  --red:#A3121F;--red-deep:#6E0A14;--red-hi:#C4262C;
+  --gold:#E3AE57;--gold-soft:#F4DDB0;--gold-tint:#F7EBD3;--gold-ink:#8A6417;
+  --paper:#FBF6EE;--surface:#FFFDFA;--sunken:#F3ECE2;
+  --ink:#1D1514;--ink-2:#5B4D4A;--ink-3:#8A7D76;--line:#E6D9C8;--cream:#FFF6E8;
+  --disp:"Noto Serif","Noto Serif TC",Georgia,"Songti TC",serif;
+  --cjk:"Noto Serif TC","Songti TC",serif;
+  --body:"Inter",-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono","SF Mono",ui-monospace,Menlo,monospace;
+}
 @page{size:1920px 1080px;margin:0}
-*{box-sizing:border-box}html,body{margin:0;background:#2b2120}
-body{font-family:var(--body);color:var(--ink)}
-.slide{width:1920px;height:1080px;position:relative;overflow:hidden;background:var(--paper);page-break-after:always;padding:110px 140px;display:flex;flex-direction:column;gap:40px}
-.slide.red{background:radial-gradient(1200px 700px at 78% 30%,#B8202D 0%,var(--red) 45%,var(--red-deep) 100%);color:#FFF6E8}
-.kicker{font-family:var(--mono);font-size:24px;letter-spacing:.14em;text-transform:uppercase;color:var(--red)}
+*{box-sizing:border-box}
+html,body{margin:0;background:#2b2120;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
+@media screen{body{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px 0}}
+a{color:inherit;text-decoration:none}
+
+.slide{width:1920px;height:1080px;flex:none;position:relative;overflow:hidden;background:var(--paper);break-after:page;
+  padding:92px 140px 132px;display:flex;flex-direction:column;gap:34px}
+.slide:last-child{break-after:auto}
+.slide.red{background:radial-gradient(1300px 820px at 76% 28%,#B81D2A 0%,var(--red) 46%,var(--red-deep) 100%);color:var(--cream)}
+
+.kicker{font-family:var(--mono);font-weight:500;font-size:24px;letter-spacing:.14em;text-transform:uppercase;color:var(--red)}
 .red .kicker{color:var(--gold)}
-h1{font-family:var(--disp);font-weight:900;font-size:132px;line-height:1.02;margin:0;letter-spacing:-.01em}
-h2{font-family:var(--disp);font-weight:900;font-size:76px;line-height:1.1;margin:0;max-width:1500px;text-wrap:balance}
-p,li{font-size:34px;line-height:1.45;margin:0;max-width:1400px}
-.sub{font-size:40px;color:var(--ink-2);max-width:1300px}
+h1,h2,h3{margin:0}
+h1{font-family:var(--disp);font-weight:900;font-size:150px;line-height:1;letter-spacing:-.015em}
+h2{font-family:var(--disp);font-weight:700;font-size:72px;line-height:1.12;letter-spacing:-.01em;max-width:1560px;text-wrap:balance}
+h3{font-family:var(--body);font-weight:700;font-size:34px;line-height:1.2}
+p{margin:0;font-size:30px;line-height:1.45}
+p,li,td,.stat-note{text-wrap:pretty}
+.sub{font-size:36px;line-height:1.4;color:var(--ink-2)}
 .red .sub{color:#F6E2C9}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:36px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
-.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:34px 36px;display:flex;flex-direction:column;gap:14px}
-.card h3{font-size:36px;margin:0}
-.card p{font-size:28px;color:var(--ink-2)}
-.big{font-family:var(--mono);font-size:84px;font-weight:500;color:var(--red);line-height:1}
 .mono{font-family:var(--mono)}
-table{border-collapse:collapse;font-size:27px;width:100%}
-th,td{text-align:left;padding:14px 18px 14px 0;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:22px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
-td code{font-family:var(--mono);font-size:25px;color:var(--red)}
-.foot{position:absolute;left:140px;right:140px;bottom:56px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:20px;color:var(--ink-2)}
-.red .foot{color:#F2CFA7}
-.env{position:absolute;right:150px;top:170px;width:470px;height:640px;border-radius:28px;background:linear-gradient(180deg,#C42330,#8E0F1A);box-shadow:0 40px 80px rgba(0,0,0,.35)}
-.env:before{content:"";position:absolute;left:0;right:0;top:0;height:260px;background:#B11B27;border-radius:28px 28px 50% 50%/28px 28px 120px 120px;box-shadow:0 10px 0 rgba(0,0,0,.08)}
-.env:after{content:"福";position:absolute;left:50%;top:190px;transform:translateX(-50%);width:150px;height:150px;border-radius:50%;background:var(--gold);color:var(--red-deep);font-family:var(--disp);font-weight:900;font-size:92px;display:grid;place-items:center}
-.flow{display:flex;align-items:center;gap:22px;flex-wrap:wrap;font-size:28px}
-.node{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:18px 24px;font-weight:600}
-.node.m{border-color:var(--red);color:var(--red)}
-.arrow{font-family:var(--mono);color:var(--ink-2)}
-.shot{background:#EFE5D7;border:2px dashed #CDBBA3;border-radius:28px;display:grid;place-items:center;color:var(--ink-2);font-family:var(--mono);font-size:22px}
-.tag{display:inline-block;font-family:var(--mono);font-size:22px;padding:6px 14px;border-radius:999px;background:var(--gold-soft);color:var(--red-deep)}
+code{font-family:var(--mono);font-weight:500;color:var(--red);font-size:.9em}
+.cjk{font-family:var(--cjk)}
+.tag{display:inline-block;font-family:var(--mono);font-weight:500;font-size:22px;letter-spacing:.06em;padding:7px 16px;border-radius:999px;background:var(--gold-tint);color:var(--gold-ink);white-space:nowrap}
+
+.foot{position:absolute;left:140px;right:140px;bottom:46px;display:flex;justify-content:space-between;align-items:center;
+  font-family:var(--mono);font-size:20px;letter-spacing:.04em;color:var(--ink-3)}
+.foot .pn{color:var(--ink-2)}
+.red .foot,.red .foot .pn{color:#E9BE9A}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:38px 40px;display:flex;flex-direction:column;gap:14px}
+.card p{font-size:28px;color:var(--ink-2)}
+.big{font-family:var(--mono);font-weight:500;font-size:92px;line-height:1;color:var(--red);letter-spacing:-.02em}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:36px}
+
+/* phone frame around real app screenshots (780 px wide, 2x) */
+/* Print-safe depth: no blurred shadows (Chrome emits them as soft-masked images that Preview draws as dark boxes),
+   only flat opaque offsets. */
+.phone{display:block;padding:11px;border-radius:54px;background:#241918;flex:none;box-shadow:16px 18px 0 0 #EBDFCE}
+.phone img{display:block;width:var(--pw,360px);height:auto;border-radius:44px}
+
+/* 1 cover */
+.cover{justify-content:space-between}
+.cover-main{max-width:1080px;display:flex;flex-direction:column;gap:30px;margin-top:-10px}
+.cover h1 .cjk{color:var(--gold);font-weight:900;margin-left:.12em}
+.cover .lede{font-family:var(--disp);font-weight:700;font-size:54px;line-height:1.15;color:#FFF3E2;text-wrap:balance}
+.cover .cover-p{font-size:32px;color:#F6E2C9;max-width:980px}
+.pills{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.pills span{font-family:var(--body);font-weight:600;font-size:28px;padding:12px 26px;border-radius:999px;background:rgba(227,174,87,.16);border:1.5px solid rgba(227,174,87,.7);color:var(--gold-soft)}
+.pills em{font-style:normal;font-size:28px;color:#F2CFA7;margin-left:6px}
+.cover-phone{position:absolute;right:178px;top:80px;--pw:418px;box-shadow:18px 20px 0 0 #5E0A13}
+.cover .foot{right:auto;gap:56px;justify-content:flex-start}
+
+/* 2 problem */
+.problem{gap:40px}
+.problem .card{padding:50px 46px 54px;gap:18px}
+.problem .big{font-size:128px;margin-bottom:6px}
+.problem h3{font-size:40px}
+.problem .card p{font-size:30px}
+.closer{font-family:var(--disp);font-weight:700;font-size:48px;line-height:1.28;color:var(--ink);max-width:1560px;margin-top:14px;text-wrap:balance}
+.closer em{font-style:normal;color:var(--red)}
+
+/* 3 product */
+.product{flex-direction:row;align-items:center;gap:60px;padding:92px 110px 132px 140px}
+.product-text{flex:1;display:flex;flex-direction:column;gap:30px}
+.product h2{font-size:56px;line-height:1.14}
+.product .sub{font-size:32px}
+.phones{display:flex;gap:44px;align-items:flex-start}
+.phones figure{margin:0;display:flex;flex-direction:column;gap:20px;--pw:302px}
+figcaption{display:flex;flex-direction:column;gap:4px;padding-left:6px}
+figcaption b{font-size:32px;font-weight:700;display:flex;align-items:center;gap:12px}
+figcaption b i{font-style:normal;font-family:var(--mono);font-size:22px;font-weight:600;width:38px;height:38px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center}
+figcaption span{font-size:24px;color:var(--ink-2)}
+
+/* 4 how it works */
+.steps{display:grid;grid-template-columns:1fr 56px 1fr 56px 1.28fr;align-items:stretch}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:36px 38px;display:flex;flex-direction:column;gap:16px}
+.step.hot{border:2px solid var(--red);background:#FFF9F5}
+.step-n{font-family:var(--mono);font-weight:600;font-size:22px;letter-spacing:.12em;color:var(--red)}
+.step p{font-size:28px;color:var(--ink-2)}
+.step code{font-size:23px;margin-top:auto;padding:12px 16px;border-radius:12px;background:#FBEDEA;color:var(--red);align-self:flex-start;white-space:nowrap}
+.step-arrow{display:grid;place-items:center}
+.step-arrow svg{width:40px;height:40px}
+.strip{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:6px}
+.strip div{font-size:27px;line-height:1.45;color:var(--ink-2);border-top:2px solid var(--line);padding-top:22px}
+.strip b{color:var(--ink)}
+
+/* 5 contracts */
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:15px 26px 15px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-weight:500;font-size:21px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);padding-top:0}
+td{font-size:26px;line-height:1.35}
+td:first-child{font-weight:700;width:31%}
+td:nth-child(2){width:33%}
+td:nth-child(2) code{font-size:23px;line-height:1.5}
+td:last-child{color:var(--ink-2);padding-right:0}
+tr.key td{background:#F7EBD3}
+tr.key td:first-child{box-shadow:-16px 0 0 0 #F7EBD3}
+tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
+.mezo{gap:26px}
+.mezo h2{font-size:64px}
+.calls td{font-size:24px;padding-top:13px;padding-bottom:13px}
+.calls td:first-child{width:22%}
+.calls td:nth-child(2){width:27%}
+.calls td:nth-child(2) code{font-size:22px}
+.calls td:nth-child(3){width:30%}
+.calls td:last-child{width:21%}
+.calls .tx{display:flex;align-items:baseline;gap:10px;white-space:nowrap;font-size:21px;line-height:1.55}
+.calls .tx span{color:var(--ink-3);font-size:21px}
+.calls .tx b{font-family:var(--mono);font-weight:500;color:var(--red);border-bottom:1.5px solid rgba(163,18,31,.35)}
+.calls .by-app{display:block;font-size:21px;line-height:1.4;color:var(--ink-3)}
+
+/* 6 demand */
+.demand{flex-direction:row;align-items:flex-start;gap:90px}
+.demand-text{flex:1;display:flex;flex-direction:column;gap:34px}
+.demand h2{font-size:64px}
+.points{display:flex;flex-direction:column;gap:26px}
+.point{display:grid;grid-template-columns:10px 1fr;column-gap:28px;row-gap:6px}
+.point::before{content:"";grid-row:1 / span 2;background:var(--gold);border-radius:6px}
+.point p{font-size:28px;color:var(--ink-2)}
+.demand-phone{--pw:368px}
+
+/* 7 traction (filled by build.mjs) */
+.row-label{display:flex;align-items:center;gap:18px;font-size:26px;color:var(--ink-2)}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:28px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:34px 34px 36px;display:flex;flex-direction:column;gap:10px}
+.stat .big{font-size:84px}
+.stat.hot{border:2px solid var(--red)}
+.stat-label{font-size:30px;font-weight:700}
+.stat-note{font-size:24px;color:var(--ink-2);line-height:1.35}
+.callout{display:flex;flex-direction:column;gap:10px;padding:30px 38px;border-radius:24px;background:var(--red);color:var(--cream);
+  background:linear-gradient(120deg,var(--red) 0%,var(--red-deep) 100%)}
+.callout-head{font-family:var(--disp);font-weight:700;font-size:40px;line-height:1.2}
+.callout-body{font-size:28px;color:#F6E2C9}
+.callout a{font-family:var(--mono);font-weight:500;color:var(--gold);border-bottom:2px solid rgba(227,174,87,.6)}
+.fine{font-size:24px;color:var(--ink-2)}
+
+/* 8 business */
+.business{gap:30px}
+.business h2{font-size:62px;max-width:none}
+.business .sub{font-size:32px;margin-top:-8px}
+.business .card{padding:36px 40px 40px;gap:12px}
+.business .big{font-size:96px}
+.business .next{padding:24px 34px}
+.business .next p{font-size:29px}
+.next .mono{font-weight:600;color:var(--red)}
+.business h3{font-size:36px}
+.business .card p{font-size:29px}
+.big.word{font-family:var(--disp);font-weight:700;letter-spacing:-.01em}
+.next{display:flex;align-items:center;gap:26px;padding:28px 34px;border-radius:24px;background:var(--gold-tint);border:1px solid #EBD6AE}
+.next .tag{background:var(--red);color:#fff;font-size:22px}
+.next p{font-size:30px;color:var(--ink)}
+
+/* 9 safety */
+.safety-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:56px;align-items:start}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:24px}
+.checks li{font-size:29px;line-height:1.4;padding-left:56px;position:relative}
+.checks li::before{content:"";position:absolute;left:0;top:6px;width:34px;height:34px;border-radius:50%;background:var(--red)}
+.checks li::after{content:"";position:absolute;left:11px;top:13px;width:9px;height:16px;border:solid #fff;border-width:0 4px 4px 0;transform:rotate(45deg)}
+.proofs{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.proof{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:28px 30px;display:flex;flex-direction:column;gap:10px}
+.proof .big{font-size:76px}
+.proof p{font-size:24px;line-height:1.35;color:var(--ink-2)}
+.proof .big.word{font-size:56px;line-height:76px}
+.caps{display:flex;align-items:center;gap:24px;font-size:28px;color:var(--ink);padding:24px 30px;border-radius:20px;background:var(--sunken)}
+.caps .mono{font-weight:600;color:var(--red)}
+.safety{gap:30px}
+.safety h2{font-size:62px;max-width:none}
+.checks .mono{white-space:nowrap;font-size:.9em}
+
+/* 10 roadmap */
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;position:relative;margin:auto 0}
+.timeline::before{content:"";position:absolute;left:24px;right:24px;top:25px;height:4px;background:linear-gradient(90deg,var(--gold),var(--red))}
+.tl{position:relative;display:flex;flex-direction:column;gap:20px;padding:84px 0 0}
+.tl::before{content:"";position:absolute;left:10px;top:10px;width:34px;height:34px;border-radius:50%;background:var(--paper);border:6px solid var(--gold)}
+.tl.hot::before{border-color:var(--red);background:var(--red)}
+.tl-when{font-family:var(--mono);font-weight:600;font-size:32px;letter-spacing:.06em;color:var(--red)}
+.tl h3{font-family:var(--disp);font-size:50px;line-height:1.14}
+.tl p{font-size:30px;color:var(--ink-2)}
+.goal{margin-top:8px;align-self:flex-start;font-size:26px;font-weight:600;color:var(--gold-ink);background:var(--gold-tint);padding:12px 20px;border-radius:14px}
+
+/* 11 team */
+.team{justify-content:center;gap:30px}
+.team h2{font-size:132px;font-weight:900;color:#FFF6E8}
+.team .lede{font-family:var(--disp);font-weight:700;font-size:52px;color:var(--gold)}
+.team .sub{max-width:1100px}
+.team .handle{font-family:var(--mono);font-size:30px;color:#FFE9C7;margin-top:10px}
+.env{position:absolute;right:200px;top:240px;width:400px;height:560px;border-radius:30px;background:linear-gradient(180deg,#C42330,#8E0F1A);
+  box-shadow:20px 22px 0 0 #5E0A13}
+.env::before{content:"";position:absolute;left:0;right:0;top:0;height:230px;background:linear-gradient(180deg,#D12F35,#A8191F);
+  border-radius:30px 30px 50% 50%/30px 30px 110px 110px;box-shadow:0 8px 0 #8A111B}
+.env::after{content:"福";position:absolute;left:50%;top:166px;transform:translateX(-50%);width:132px;height:132px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#F4D18A,var(--gold) 60%,#B98535);color:var(--red-deep);font-family:var(--cjk);font-weight:900;font-size:80px;display:grid;place-items:center}
+
+/* 12 links */
+.link-list{display:flex;flex-direction:column}
+.link-row{display:grid;grid-template-columns:330px 1fr;gap:30px;padding:26px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.link-row:first-child{border-top:1px solid var(--line)}
+.link-k{font-family:var(--mono);font-weight:500;font-size:24px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.link-v{display:flex;flex-direction:column;gap:6px}
+.link-v a{font-family:var(--mono);font-weight:500;font-size:44px;color:var(--red);line-height:1.15}
+.link-v a.addr{font-size:34px}
+.link-note{font-size:24px;color:var(--ink-2)}
+/* more than four links (deck, video or a judge packet passed to build.mjs): two columns, label above the link */
+.link-list.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:56px}
+.link-list.two .link-row{grid-template-columns:minmax(0,1fr);gap:8px;padding:20px 0;align-content:start}
+.link-list.two .link-v a{overflow-wrap:anywhere}
+.link-list.two .link-row:nth-child(2){border-top:1px solid var(--line)}
+.link-list.two .link-v a{font-size:32px}
+.link-list.two .link-v a.addr{font-size:26px}
+.link-list .link-row.hot .link-v a{color:var(--red)}
+.link-list .link-row.hot .link-k{color:var(--red)}
 </style>
 </head>
 <body>
 
-<section class="slide red">
-  <div class="kicker">Mezo Buildathon · Wave 2 · Track 2</div>
-  <h1>Hongbao 紅包</h1>
-  <p class="sub" style="max-width:1000px">MUSD red packets that land in Mezo savings. One link; every friend who taps it gets a share already earning MEZO, with gas included.</p>
-  <div class="env" aria-hidden="true"></div>
-  <div class="foot"><span>【live link】</span><span>github.com/tedinroc/hongbao</span></div>
+<!-- 1 · cover -->
+<section class="slide red cover">
+  <div class="kicker">Mezo Buildathon · Wave 2 · Track 2: Access and distribution</div>
+  <div class="cover-main">
+    <h1>Hongbao<span class="cjk">紅包</span></h1>
+    <p class="lede">MUSD red packets that land in Mezo savings.</p>
+    <p class="cover-p">One link in a group chat. Every friend who taps it gets a share in their own name, staked in Mezo’s sMUSD gauge by default, with BTC gas included.</p>
+    <div class="pills"><span>No wallet</span><span>No gas</span><span>No MUSD</span><em>needed to open one</em></div>
+  </div>
+  <div class="phone cover-phone"><img src="{{imgCover}}" alt="Opened red packet in Traditional Chinese: the share is staked in Mezo's gauge"></div>
+  <div class="foot"><a href="{{liveUrl}}">{{liveHost}}</a><a href="{{repoUrl}}">{{repoHost}}</a><a href="https://github.com/tedinroc">Ted Chen</a></div>
 </section>
 
-<section class="slide">
+<!-- 2 · problem -->
+<section class="slide problem">
   <div class="kicker">Problem</div>
   <h2>The first step on Mezo is the hardest one.</h2>
   <div class="grid3">
-    <div class="card"><div class="big">BTC</div><h3>Gas is BTC</h3><p>A new wallet that receives MUSD or MEZO cannot move it until it also gets BTC on Mezo.</p></div>
-    <div class="card"><div class="big">0</div><h3>No MUSD faucet</h3><p>Getting a first MUSD means bridging from Base or Ethereum, or borrowing.</p></div>
-    <div class="card"><div class="big">2,000</div><h3>Smallest loan, MUSD</h3><p>1,800 minimum debt plus a 200 MUSD gas deposit, so small users cannot borrow at all.</p></div>
+    <div class="card"><div class="big">BTC</div><h3>Gas is paid in BTC</h3><p>A new wallet that receives MUSD or MEZO can’t move it until it also has BTC on Mezo.</p></div>
+    <div class="card"><div class="big">0</div><h3>MUSD faucets</h3><p>A newcomer has no simple way to get a first few MUSD.</p></div>
+    <div class="card"><div class="big">2,000</div><h3>MUSD smallest loan</h3><p>1,800 minimum debt plus a 200 MUSD gas deposit. Too big for a first try.</p></div>
   </div>
-  <p class="sub">Meanwhile, small money already moves between friends every day, as red packets in group chats.</p>
+  <p class="closer">Meanwhile, small money already moves between friends every day: <em>as red packets in group chats.</em></p>
+  <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Product</div>
-  <h2>Send a red packet. Your friends land inside Mezo savings.</h2>
-  <div class="grid3" style="flex:1">
-    <div class="shot">【screenshot: Send】</div>
-    <div class="shot">【screenshot: Claim — Earn MEZO / Save / Cash】</div>
-    <div class="shot">【screenshot: Opened — MEZO counter, Pass it on】</div>
+<!-- 3 · product -->
+<section class="slide product">
+  <div class="product-text">
+    <div class="kicker">Product</div>
+    <h2>Send a red packet.<br>Friends land in Mezo savings.</h2>
+    <p class="sub">Opening one is free: the packet pays the gas.</p>
   </div>
+  <div class="phones">
+    <figure><figcaption><b><i>1</i>Send</b><span>MUSD or BTC, one link</span></figcaption><div class="phone"><img src="{{imgSend}}" alt="Send screen"></div></figure>
+    <figure><figcaption><b><i>2</i>Claim</b><span>Earn MEZO, Save or Cash</span></figcaption><div class="phone"><img src="{{imgClaim}}" alt="Claim screen"></div></figure>
+    <figure><figcaption><b><i>3</i>Opened</b><span>Staked in their own name</span></figcaption><div class="phone"><img src="{{imgOpened}}" alt="Opened packet"></div></figure>
+  </div>
+  <div class="foot"><span>Real app screens, from the full-stack run on a Mezo testnet fork</span><span class="pn">__PN__</span></div>
 </section>
 
+<!-- 4 · how it works -->
 <section class="slide">
   <div class="kicker">How it works</div>
-  <h2>Built on Mezo, not next to it.</h2>
-  <div class="flow">
-    <span class="node">Sender</span><span class="arrow">MUSD permit · BTC · Mezo loan →</span>
-    <span class="node">Hongbao</span><span class="arrow">deposit →</span><span class="node m">MUSD Savings Rate vault</span>
+  <h2>Three steps, all on Mezo.</h2>
+  <div class="steps">
+    <div class="step"><div class="step-n">01 · FUND</div><h3>Fill the packet</h3><p>MUSD with a permit signature, no separate approval; BTC swapped on Mezo’s Tigris pool; or MUSD from your Mezo loan.</p></div>
+    <div class="step-arrow"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 20h22M22 11l9 9-9 9" fill="none" stroke="#A3121F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="step"><div class="step-n">02 · WAIT</div><h3>Earn while it waits</h3><p>The packet sits as sMUSD in Mezo’s MUSD Savings Rate vault until friends claim.</p></div>
+    <div class="step-arrow"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 20h22M22 11l9 9-9 9" fill="none" stroke="#A3121F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="step hot"><div class="step-n">03 · CLAIM</div><h3>Land in Mezo</h3><p>The link signs a claim, a relayer submits it, and the share lands in the friend’s own name, staked by default, plus BTC for gas.</p><code>VaultGauge.deposit(amount, recipient)</code></div>
   </div>
-  <div class="flow">
-    <span class="node">Friend taps link</span><span class="arrow">signed claim →</span><span class="node">relayer</span><span class="arrow">claim →</span>
-    <span class="node m">VaultGauge.deposit(share, friend)</span><span class="arrow">+ BTC gas drip</span>
+  <div class="strip">
+    <div><b>Nothing gets stuck.</b> The sender can refund any time; after expiry, anyone can send the rest back to the sender.</div>
+    <div><b>The key stays in the link.</b> It lives in the #fragment, never on a server, and each claim is signed for one recipient and payout.</div>
   </div>
-  <table>
-    <tr><th>Mezo contract</th><th>Call</th><th>Why</th></tr>
-    <tr><td>MUSD Savings Rate (sMUSD)</td><td><code>deposit · withdraw · claimYield</code></td><td>Unclaimed packets earn savings yield</td></tr>
-    <tr><td>sMUSD VaultGauge</td><td><code>deposit(amount, recipient)</code></td><td>Each share is staked in the recipient's own name and earns MEZO</td></tr>
-    <tr><td>Tigris router + PriceFeed</td><td><code>swapExactTokensForTokens · fetchPrice</code></td><td>Fund with BTC at the oracle price; stale price reverts</td></tr>
-    <tr><td>BorrowerOperations + TroveManager</td><td><code>withdrawMUSD · getCurrentICR · maxBorrowingCapacity</code></td><td>Send straight from your Mezo loan, ratio checked first</td></tr>
+  <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
+</section>
+
+<!-- 5 · Mezo contracts -->
+<section class="slide mezo">
+  <div class="kicker">Mezo integration</div>
+  <h2>Built on ten Mezo contracts, called directly.</h2>
+  <table class="calls">
+    <tr><th>Mezo contract</th><th>Call</th><th>Why</th><th>On Mezo testnet</th></tr>
+    <tr><td>MUSD</td><td><code>permit · transferFrom</code></td><td>Fund a packet with a permit signature, no separate approval</td><td>{{{txFundMusd}}}</td></tr>
+    <tr><td>MUSD Savings Rate vault (sMUSD)</td><td><code>deposit · withdraw · claimYield</code></td><td>Unclaimed money earns the savings rate</td><td>{{{txSave}}}{{{txCash}}}{{{txRefund}}}</td></tr>
+    <tr class="key"><td>sMUSD VaultGauge</td><td><code>deposit(amount, recipient)</code></td><td>Staked shares, the default, sit in the friend’s own name and earn MEZO</td><td>{{{txStake}}}</td></tr>
+    <tr><td>Pools Voter</td><td><code>isAlive(gauge)</code></td><td>Fall back to plain sMUSD if the gauge is killed</td><td><span class="by-app">checked in every staked claim</span></td></tr>
+    <tr><td>Tigris Router + MUSD PriceFeed</td><td><code>swapExactTokensForTokens · fetchPrice</code></td><td>Fund with BTC at the oracle price; a stale price reverts</td><td>{{{txFundBtc}}}</td></tr>
+    <tr><td>BorrowerOperations, TroveManager, HintHelpers, SortedTroves</td><td><code>withdrawMUSD · getCurrentICR · getTroveMaxBorrowingCapacity · hints</code></td><td>Send straight from your Mezo loan, with ICR and Recovery Mode checks</td><td>{{{txLoan}}}</td></tr>
   </table>
+  <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
 </section>
 
-<section class="slide">
-  <div class="kicker">Why it creates MUSD demand</div>
-  <h2>Every packet is new MUSD, ending as staked sMUSD under a wallet that held nothing.</h2>
-  <div class="grid3">
-    <div class="card"><h3>New holders</h3><p>Recipients start with zero. Their first Mezo position is savings, not an idle balance.</p></div>
-    <div class="card"><h3>New reason to hold MUSD</h3><p>Gifts, onboarding budgets and community rewards, a use that does not exist on Mezo today.</p></div>
-    <div class="card"><h3>Loops back</h3><p>Recipients get gas, so they can claim MEZO, cash out, or pass a packet on to the next person.</p></div>
+<!-- 6 · why it grows MUSD -->
+<section class="slide demand">
+  <div class="demand-text">
+    <div class="kicker">Why it grows MUSD</div>
+    <h2>Gifting needs MUSD. Every gift starts in Mezo savings.</h2>
+    <div class="points">
+      <div class="point"><h3>New holders</h3><p>Recipients start at zero. Their first Mezo position is staked sMUSD by default, not an idle balance.</p></div>
+      <div class="point"><h3>A new reason to get MUSD</h3><p>Gifts, onboarding budgets, community rewards. Senders top up with BTC on Mezo’s pool or borrow from their loan.</p></div>
+      <div class="point"><h3>It loops</h3><p>Each share brings BTC for gas, so a friend can claim MEZO, cash out or pass a packet on.</p></div>
+    </div>
   </div>
+  <div class="phone demand-phone"><img src="{{imgNext}}" alt="Opened packet: MEZO earned and next steps"></div>
+  <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
 </section>
 
-<section class="slide">
+<!-- 7 · traction (filled from docs/proof.json and /api/stats) -->
+<section class="slide traction">
   <div class="kicker">Traction · public ledger</div>
-  <h2>Live on Mezo, with people outside the team.</h2>
-  <div class="grid3">
-    <div class="card"><div class="big">【N】</div><h3>packets</h3></div>
-    <div class="card"><div class="big">【K】</div><h3>distinct recipients</h3></div>
-    <div class="card"><div class="big">【S】</div><h3>outside senders with their own funding</h3></div>
-  </div>
-  <p class="sub">Every packet and claim, with team wallets tagged: 【ledger link】</p>
+  {{{traction}}}
+  <div class="foot"><a href="{{proofUrl}}">{{tractionSource}}</a><span class="pn">__PN__</span></div>
 </section>
 
-<section class="slide">
+<!-- 8 · business model -->
+<section class="slide business">
   <div class="kicker">Business model</div>
-  <h2>Small, honest fees. No gas subsidy.</h2>
+  <h2>Branded onboarding packets for Mezo projects.</h2>
+  <p class="sub">A project funds the packets; its community lands in Mezo savings, staked by default.</p>
   <div class="grid3">
-    <div class="card"><div class="big">1%</div><h3>packet fee</h3><p>Paid in MUSD at creation.</p></div>
-    <div class="card"><div class="big">float</div><h3>savings yield</h3><p>Unclaimed packets earn the MUSD savings rate for the treasury.</p></div>
-    <div class="card"><div class="big">tip</div><h3>self-paying relays</h3><p>Each share carries a tiny BTC tip, so anyone can relay a claim at no cost to us.</p></div>
+    <div class="card"><div class="big">1%</div><h3>Packet fee</h3><p>Paid in MUSD when a packet is created.</p></div>
+    <div class="card"><div class="big word">Float</div><h3>Savings yield</h3><p>Unclaimed packets earn the MUSD savings rate for the treasury.</p></div>
+    <div class="card"><div class="big word">Tips</div><h3>Self-paying relays</h3><p>Each share carries a tiny BTC tip that pays whoever relays the claim. No gas subsidy.</p></div>
   </div>
-  <p class="sub">Next: branded onboarding packets for Mezo projects and communities.</p>
+  <div class="next"><span class="tag">PER FRIEND</span><p>Landing one friend in Mezo savings costs 1% of their share plus a <span class="mono">{{kitBtc}}</span> BTC gas kit by default: <span class="mono">{{dripBtc}}</span> for their own gas, <span class="mono">{{tipBtc}}</span> for the relay.</p></div>
+  <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
 </section>
 
-<section class="slide">
+<!-- 9 · safety -->
+<section class="slide safety">
   <div class="kicker">Safety</div>
-  <h2>Nobody, including us, can move the money.</h2>
-  <div class="grid2">
-    <ul style="display:flex;flex-direction:column;gap:18px;padding-left:1em">
-      <li>No owner, no upgrade path. A guardian can only pause new packets and lower caps.</li>
-      <li>Sender can refund any time; anyone can return expired packets to the sender.</li>
-      <li>If the gauge or the vault refuses, recipients and senders are paid in kind.</li>
-      <li>Mainnet capped beta: 50 MUSD per packet, 500 outstanding.</li>
+  <h2>No admin key, not even ours, can move the money.</h2>
+  <div class="safety-grid">
+    <ul class="checks">
+      <li>No owner, no upgrade path, no admin withdrawal.</li>
+      <li>A guardian can pause new packets and set caps within hard limits fixed at deployment (mainnet: <span class="mono">{{hardPacket}} / {{hardSender}} / {{hardTotal}}</span> MUSD).</li>
+      <li>Senders refund any time; anyone can return an expired packet to its sender.</li>
+      <li>Each claim is signed for one recipient, payout and relayer.</li>
     </ul>
-    <div class="card"><h3>Tested and reviewed</h3><p>【N】 Foundry tests incl. fuzzing and a conservation invariant; end-to-end on a Mezo testnet fork; three independent review passes with every finding fixed. Source verified on the Mezo explorer.</p></div>
+    <div class="proofs">
+      <div class="proof"><div class="big">{{contractTests}}</div><p>contract tests incl. fuzz: every MUSD is paid out or refunded</p></div>
+      <div class="proof"><div class="big">{{appTests}}</div><p>app tests, plus full runs on a Mezo testnet fork</p></div>
+      <div class="proof"><div class="big">{{reviewPasses}}</div><p>AI-assisted review passes; every confirmed issue fixed or documented</p></div>
+      <div class="proof"><div class="big word">Verified</div><p>contract source, on the Mezo testnet explorer</p></div>
+    </div>
   </div>
+  <div class="caps"><span class="tag">AT MAINNET LAUNCH</span><span>Beta caps: <span class="mono">{{capPacket}}</span> MUSD per packet · <span class="mono">{{capSender}}</span> open per sender · <span class="mono">{{capTotal}}</span> open in total</span></div>
+  <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
 </section>
 
+<!-- 10 · roadmap -->
 <section class="slide">
   <div class="kicker">Roadmap · next 3 months</div>
   <h2>From buildathon to Lunar New Year.</h2>
-  <table>
-    <tr><th>When</th><th>Milestone</th><th>Done when</th></tr>
-    <tr><td class="mono">Dec 2026</td><td>Mainnet public beta + Telegram bot that posts a live packet card</td><td>200+ distinct recipients</td></tr>
-    <tr><td class="mono">Jan 2027</td><td>Lunar New Year campaign (Feb 17, 2027), themes, scheduled and community packets</td><td>1,000+ recipients</td></tr>
-    <tr><td class="mono">Feb 2027</td><td>Trove-funded packets in one transaction, external review, Founder Program</td><td>Review published, caps raised</td></tr>
-  </table>
+  <div class="timeline">
+    <div class="tl"><div class="tl-when">DEC 2026</div><h3>Mainnet public beta</h3><p>Capped beta on Mezo mainnet, a Telegram bot that posts a live packet card into the chat, and an external review.</p><div class="goal">Goal: 200+ distinct recipients</div></div>
+    <div class="tl hot"><div class="tl-when">JAN 2027</div><h3>Lunar New Year campaign</h3><p>Review published, caps raised within the hard limits. Themes, scheduled and community packets, ready for Feb 6, 2027.</p><div class="goal">Goal: 1,000+ recipients</div></div>
+    <div class="tl"><div class="tl-when">FEB 2027</div><h3>Loan-funded packets in one transaction</h3><p>Borrow from your Mezo loan and fill a packet in a single step.</p></div>
+  </div>
+  <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
 </section>
 
-<section class="slide red">
+<!-- 11 · team -->
+<section class="slide red team">
   <div class="kicker">Team</div>
-  <h2 style="color:#FFF6E8">Ted Chen — founder and sole developer</h2>
-  <p class="sub">Contracts, app, relayer, design. Built with AI coding assistance (Claude).</p>
-  <p class="sub">Try it: 【live link】 · Code: github.com/tedinroc/hongbao</p>
-  <div class="env" aria-hidden="true" style="transform:scale(.8);top:260px"></div>
+  <h2>Ted Chen</h2>
+  <p class="lede">Founder and sole developer.</p>
+  <p class="sub">Contracts, app, relayer and design, all new in Wave 2.<br>Built with AI coding assistance (Claude).</p>
+  <p class="handle"><a href="https://github.com/tedinroc">github.com/tedinroc</a></p>
+  <div class="env" aria-hidden="true"></div>
+  <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
+</section>
+
+<!-- 12 · links -->
+<section class="slide links">
+  <div class="kicker">Try it</div>
+  <h2>Try it on Mezo testnet.</h2>
+  <div class="link-list{{linkListClass}}">
+    {{{extraRows}}}
+    <div class="link-row"><div class="link-k">Live app</div><div class="link-v"><a href="{{liveUrl}}">{{liveHost}}</a><span class="link-note">Mezo testnet · no wallet needed to open or claim</span></div></div>
+    <div class="link-row"><div class="link-k">Public ledger</div><div class="link-v"><a href="{{ledgerUrl}}">{{ledgerHost}}</a><span class="link-note">every packet and claim, team wallets tagged</span></div></div>
+    <div class="link-row"><div class="link-k">Code</div><div class="link-v"><a href="{{repoUrl}}">{{repoHost}}</a><span class="link-note">{{codeNote}}</span></div></div>
+    {{{contractRows}}}
+  </div>
+  <div class="foot"><span>Hongbao 紅包 · Mezo Buildathon Wave 2</span><span class="pn">__PN__</span></div>
 </section>
 
 </body>

@@ -1,0 +1,46 @@
+{
+  "note": "Phone screenshots used by the deck. Each output is 780 px wide, made by stacking crops (y < 0 counts from the bottom of the source); a sticky header (top 120 px) or bottom navigation (last 128 px) is stacked back on where a scrolled phone would show it. The three slide-3 phones are all 1664 px tall. Sources are relative to the repo root; ops/screens is not committed, so when a source is missing build.mjs keeps the committed img/ file.",
+  "width": 780,
+  "quality": 0.86,
+  "shots": [
+    {
+      "out": "img/cover-opened-zh.jpg",
+      "what": "Opened packet in Traditional Chinese: the share is in, staked in Mezo's gauge",
+      "layers": [{ "src": "ops/screens/after/phone-light-zh--claim-after-fold.png" }]
+    },
+    {
+      "out": "img/send.jpg",
+      "what": "Send form scrolled to the amount: pay with MUSD or BTC, total, shares, message, open time",
+      "layers": [
+        { "src": "ops/screens/after/phone-light-en--send-filled.png", "y": 0, "h": 120 },
+        { "src": "ops/screens/after/phone-light-en--send-filled.png", "y": 975, "h": 1416 },
+        { "src": "ops/screens/after/phone-light-en--send-filled.png", "y": -128, "h": 128 }
+      ]
+    },
+    {
+      "out": "img/claim.jpg",
+      "what": "Claim screen scrolled to the three payouts (Earn MEZO, Save, Cash) and the sticky open button",
+      "layers": [
+        { "src": "ops/screens/after/phone-light-en--claim-before.png", "y": 0, "h": 120 },
+        { "src": "ops/screens/after/phone-light-en--claim-before.png", "y": 758, "h": 1544 }
+      ]
+    },
+    {
+      "out": "img/opened.jpg",
+      "what": "Opened packet, staked in Mezo's gauge",
+      "layers": [
+        { "src": "ops/screens/after/phone-light-en--claim-after-fold.png", "y": 0, "h": 1536 },
+        { "src": "ops/screens/after/phone-light-en--claim-after-fold.png", "y": -128, "h": 128 }
+      ]
+    },
+    {
+      "out": "img/next.jpg",
+      "what": "Opened packet scrolled down: MEZO earned counter and next steps (sticky header and bottom navigation as on a phone)",
+      "layers": [
+        { "src": "ops/screens/after/phone-light-en--claim-after-fold.png", "y": 0, "h": 120 },
+        { "src": "ops/screens/after/phone-light-en--claim-after.png", "y": 1040, "h": 1500 },
+        { "src": "ops/screens/after/phone-light-en--claim-after-fold.png", "y": -128, "h": 128 }
+      ]
+    }
+  ]
+}

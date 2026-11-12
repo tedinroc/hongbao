@@ -7,9 +7,11 @@ Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D
 | | |
 |---|---|
 | Live app | https://hongbao-mezo.pages.dev (no wallet needed to open or claim) |
+| Demo video | https://hongbao-mezo.pages.dev/video/ (1:44, app footage on live Mezo testnet) |
+| Deck | https://hongbao-mezo.pages.dev/deck.pdf ([source](docs/deck/)) |
 | Track | Track 2: Access and distribution (Mezo Adoption) |
 | Contract | Mezo testnet [`0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4`](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4) (source verified); Mezo mainnet: capped beta, address added at launch |
-| Evidence | [docs/PROOF.md](docs/PROOF.md): every packet, claim and refund with explorer links, team vs outside wallets |
+| Evidence | [docs/PROOF.md](docs/PROOF.md): every packet, claim and refund with explorer links, team vs outside wallets. Every funding path (MUSD permit, BTC through Mezo's pool, a Mezo loan) and every payout (staked, saved, cash) plus a refund has a real testnet transaction |
 | Status | Entirely new, built during Wave 2 |
 
 ## Why
@@ -29,15 +31,15 @@ link holder taps ──signed claim (link key)──▶ relayer ──claim─�
 expiry ──refund──▶ unclaimed MUSD and unused gas back to the sender
 ```
 
-- The link carries a one-time key in its `#fragment`, which never reaches a server. The contract stores only the key's address and checks an EIP-712 `Claim(packetId, recipient, payout)` signature, so a signature cannot be redirected to another address or another payout.
-- Optional one-per-person mode: the relayer co-signs an `Attest(packetId, recipient, deadline)` after rate-limiting by device and IP.
+- The link carries a one-time key in its `#fragment`, which never reaches a server. The contract stores only the key's address and checks an EIP-712 `Claim(packetId, recipient, payout, relayer)` signature, so a signature cannot be redirected to another address, another payout or another relayer.
+- Optional one-per-person mode: the relayer co-signs an `Attest(packetId, recipient, payout, deadline)` after rate-limiting by device and IP.
 - Anyone can relay a claim; the packet's tip pays for it, so the relayer needs no subsidy.
 
 ## Mezo contracts Hongbao calls
 
 | Mezo contract | Call | Why |
 |---|---|---|
-| MUSD | `permit`, `transferFrom`, `transfer` | fund packets in one signature |
+| MUSD | `permit`, `transferFrom`, `transfer` | fund packets with a permit signature, no separate approval |
 | MUSD Savings Rate (sMUSD) | `deposit`, `withdraw`, `claimYield` | unclaimed packets earn savings yield; cash claims and refunds |
 | sMUSD VaultGauge | `deposit(amount, recipient)` | each share is staked in the recipient's own name and earns MEZO |
 | Pools voter | `isAlive(gauge)` | fall back to plain sMUSD if the gauge is ever killed |

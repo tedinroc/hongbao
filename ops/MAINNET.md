@@ -27,7 +27,7 @@ TREASURY=<your address> GUARDIAN=<your address> ~/.foundry/bin/forge script scri
 
 Copy the printed `Hongbao deployed at 0x…` address and send it to me; I will verify the source on the Mezo explorer, update `config/deployments.json`, enable mainnet in the app and relayer, and redeploy the site.
 
-Hard caps fixed at deployment: 50 MUSD per packet, 500 MUSD outstanding, 1% fee.
+Beta caps at launch: 50 MUSD per packet, 100 MUSD open per sender, 500 MUSD open in total, 1% fee. The guardian can change the caps only within hard caps fixed at deployment: 100 / 500 / 5,000 MUSD.
 
 ## 4. Fund your first packets
 

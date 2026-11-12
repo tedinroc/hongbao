@@ -21,3 +21,5 @@ ops/audit-pocs/
 ops/staged/
 ops/screens/
 contracts/broadcast/
+web/public/video/*.mp4
+web/public/deck.pdf

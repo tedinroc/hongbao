@@ -14,5 +14,9 @@ cd "$ROOT/web"
 WHO="$(npx wrangler whoami 2>&1 || true)"
 grep -q "$HB_CF_EXPECT_EMAIL" <<<"$WHO" || { echo "wrong Cloudflare account"; exit 1; }
 node "$ROOT/ops/snapshot.mjs" || echo "snapshot refresh skipped"
+# Hosted copies of the pitch deck and demo video (not in git: the deck lives at docs/Hongbao-deck.pdf, the video is
+# a web encode of the pitch cut). /deck.pdf and /video/ are linked from the deck, README and submission.
+cp "$ROOT/docs/Hongbao-deck.pdf" "$ROOT/web/public/deck.pdf"
+[ -f "$ROOT/web/public/video/hongbao-pitch.mp4" ] || echo "warning: web/public/video/hongbao-pitch.mp4 missing; /video/ will have no video"
 npm run build
 npx wrangler pages deploy dist --project-name hongbao-mezo --branch "${BRANCH:-main}" --commit-dirty=true
