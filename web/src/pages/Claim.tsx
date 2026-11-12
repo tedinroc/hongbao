@@ -292,7 +292,7 @@ function ClaimInner({ chainId, id, frag }: { chainId: ChainId; id: bigint; frag:
                       {t(o.title)}
                       {o.value === Payout.Stake ? <span className="chip chip-gold">{t('payout.recommended')}</span> : null}
                     </span>
-                    <span className="option-body" style={{ display: 'block' }}>
+                    <span className="option-body">
                       {t(o.body)}
                     </span>
                   </span>

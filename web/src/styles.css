@@ -1944,8 +1944,26 @@ a.contract:hover {
 }
 
 .claim-page .option-body {
+  display: block;
   font-size: 13.5px;
   line-height: 1.45;
+}
+
+/* Only the chosen payout explains itself, so all three choices fit above the pinned open button on a phone. */
+.claim-page .option[aria-checked='false'] .option-body {
+  display: none;
+}
+
+.claim-page .option[aria-checked='false'] {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* Short phone screens: a smaller closed packet keeps the choices and the button on one screen. */
+@media (max-height: 900px) {
+  .claim-page .env-stage {
+    width: min(54vw, 214px);
+  }
 }
 
 .claim-to {
