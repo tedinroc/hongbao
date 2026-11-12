@@ -1,6 +1,25 @@
 {
   "note": "Wallets controlled by the Hongbao team. The public ledger tags these as team; every other address is outside.",
   "wallets": [
-    { "address": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54", "label": "testnet deployer / relayer" }
+    {
+      "address": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+      "label": "testnet deployer / relayer"
+    },
+    {
+      "address": "0x825eC0b18883d6349De211Ab46403Ba0E185488e",
+      "label": "test recipient (stake)"
+    },
+    {
+      "address": "0x87B50aB9EAfEAa1f7BF45727062d331386d9746b",
+      "label": "test recipient (save)"
+    },
+    {
+      "address": "0xC2fF27FFDB61e572B6b5c50c9E721F099F1e04b2",
+      "label": "test recipient (cash)"
+    },
+    {
+      "address": "0x023CeAc4f5db03F2402dA5Eaa0f3E5288ABf7f39",
+      "label": "test recipient (live relayer check)"
+    }
   ]
 }

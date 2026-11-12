@@ -1,4 +1,14 @@
 {
-  "31611": { "name": "Mezo testnet", "hongbao": null, "deployBlock": null, "enabled": true },
-  "31612": { "name": "Mezo mainnet", "hongbao": null, "deployBlock": null, "enabled": false }
+  "31611": {
+    "name": "Mezo testnet",
+    "hongbao": "0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4",
+    "deployBlock": 16730213,
+    "enabled": true
+  },
+  "31612": {
+    "name": "Mezo mainnet",
+    "hongbao": null,
+    "deployBlock": null,
+    "enabled": false
+  }
 }
