@@ -118,3 +118,30 @@ ABIs: `shared/mezo-trove-abis.json`. Addresses:
 ## Phase 2: sharing
 
 The link must be channel-agnostic. Share buttons in this order: Telegram (`https://t.me/share/url?url=<link>&text=<msg>`), WhatsApp (`https://wa.me/?text=<msg+link>`), LINE (`https://line.me/R/share?text=<msg+link>`), copy link, QR, and `navigator.share` when available. Mezo's community lives on Telegram and Discord, so Telegram is the primary button.
+
+## v2 contract changes (after the security review) — the code now follows this
+
+The contract in `contracts/src/Hongbao.sol` was revised after three review passes; `shared/Hongbao.abi.json` is regenerated. Changes that affect the app and relayer:
+
+- `claim(id, recipient, payout, relayer, keySig, attestDeadline, attestSig)` — new `relayer` argument. If non-zero, only that address may submit the claim (stops copied transactions stealing the tip). `address(0)` = anyone may submit.
+- EIP-712 `Claim(uint256 packetId,address recipient,uint8 payout,address relayer)` signed by the link key. The browser signs with `relayer` = the relayer address from `/api/config` when it will use our relayer, or `address(0)` when the recipient submits the transaction themselves.
+- EIP-712 `Attest(uint256 packetId,address recipient,uint8 payout,uint256 deadline)` signed by the attester — now binds the payout too.
+- Views: `claimDigest(id, recipient, payout, relayer)`, `attestDigest(id, recipient, payout, deadline)`.
+- New errors: `BadRecipient` (recipient is the Hongbao, sMUSD, gauge, MUSD or BTC contract), `WrongRelayer`, `OverSenderCap`, `OracleUnavailable` (PriceFeed stale/unavailable during createWithBTC), `NotPendingGuardian`. Malformed signatures now revert `BadSignature` (no OpenZeppelin ECDSA errors).
+- Caps: per-packet `maxPerPacket`, per-sender `maxPerSender` (open MUSD per sender, tracked in `senderOutstanding(sender)`), global `maxOutstanding`; each has an immutable hard cap. Guardian uses `setCaps(perPacket, perSender, total)` and a two-step `proposeGuardian` / `acceptGuardian`. Testnet: 1,000 / 2,000 / 20,000 MUSD. Mainnet: 50 / 100 / 500 MUSD.
+- Limits: `MAX_DURATION` = 7 days; `MAX_DRIP` = 0.00002 BTC (2e13 wei); `MAX_TIP` = 0.000005 BTC (5e12 wei). UI defaults stay drip 3e12, tip 1e12, expiry 24 h.
+- `fetchPrice()` is now called as non-view (Mezo's PriceFeed is an upgradeable proxy).
+
+Relayer policy changes:
+- Refuse to relay when `tipPerShare` < estimated gas × gas price × 1.2 (code `TipTooLow`).
+- Rate-limit every packet, not only attester packets: per device 1 per packet; per IP at most 5 per packet and 20 per hour.
+- Refuse recipients that are protocol addresses (mirror `BadRecipient`) before simulating.
+- Sign `Attest` with the payout the user chose; submit `claim` with `relayer` = our relayer address.
+
+UI rules from the review:
+- Branch on the payout actually used (`Claimed.payout` / return value): Stake and Cash can fall back to Save if Mezo's gauge or vault refuses.
+- Copy must say: "Earn MEZO" stakes sMUSD in Mezo's gauge and earns MEZO instead of MUSD savings interest; "Save" keeps sMUSD and earns MUSD savings interest; savings interest on unclaimed money goes to the Hongbao treasury.
+- BTC funding: preflight `router.getAmountsOut` against the PriceFeed floor; pass `minMusdOut` = pool quote × 99.5%; warn/disable when it would fail. On mainnet the pool is thin (≈0.48 BTC), so MUSD funding is the default there.
+- Pass it on: size gas kits to what the wallet's BTC can cover (or zero kits with a plain explanation).
+- Links: include the contract in the fragment, `#k=<key>&c=<hongbao address>`, and check `privateKeyToAddress(k) == packet.claimKey` before showing the packet; if not, say the link belongs to another deployment.
+- Messages from senders are untrusted text: render as text only, strip bidi control characters, cap at 200 bytes.

@@ -69,15 +69,17 @@ contract Hongbao is EIP712, ReentrancyGuard {
     uint256 public constant MAX_SHARES = 100;
     uint256 public constant MIN_SHARE = 0.01e18; // 0.01 MUSD
     uint256 public constant MIN_DURATION = 10 minutes;
-    uint256 public constant MAX_DURATION = 30 days;
-    uint256 public constant MAX_DRIP = 0.0001 ether; // 0.0001 BTC
-    uint256 public constant MAX_TIP = 0.00001 ether; // 0.00001 BTC
+    uint256 public constant MAX_DURATION = 7 days;
+    uint256 public constant MAX_DRIP = 0.00002 ether; // 0.00002 BTC
+    uint256 public constant MAX_TIP = 0.000005 ether; // 0.000005 BTC
     uint256 public constant MAX_SLIPPAGE_BPS = 300;
     uint256 public constant MAX_MESSAGE_BYTES = 200;
     uint256 public constant BTC_SEND_GAS = 50_000;
 
-    bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(uint256 packetId,address recipient,uint8 payout)");
-    bytes32 public constant ATTEST_TYPEHASH = keccak256("Attest(uint256 packetId,address recipient,uint256 deadline)");
+    bytes32 public constant CLAIM_TYPEHASH =
+        keccak256("Claim(uint256 packetId,address recipient,uint8 payout,address relayer)");
+    bytes32 public constant ATTEST_TYPEHASH =
+        keccak256("Attest(uint256 packetId,address recipient,uint8 payout,uint256 deadline)");
 
     // ------------------------------------------------------------------
     // Immutable wiring
@@ -93,6 +95,7 @@ contract Hongbao is EIP712, ReentrancyGuard {
     address public immutable treasury;
     uint256 public immutable feeBps;
     uint256 public immutable hardMaxPerPacket;
+    uint256 public immutable hardMaxPerSender;
     uint256 public immutable hardMaxOutstanding;
 
     // ------------------------------------------------------------------
@@ -100,10 +103,13 @@ contract Hongbao is EIP712, ReentrancyGuard {
     // ------------------------------------------------------------------
 
     address public guardian;
+    address public pendingGuardian;
     bool public creationPaused;
     uint256 public maxPerPacket;
+    uint256 public maxPerSender;
     uint256 public maxOutstanding;
     uint256 public outstanding; // sMUSD held for open packets
+    mapping(address => uint256) public senderOutstanding;
 
     uint256 public packetCount;
     uint256 public totalClaims;
@@ -140,9 +146,10 @@ contract Hongbao is EIP712, ReentrancyGuard {
     event YieldSwept(uint256 amount);
     event BTCDeferred(address indexed to, uint256 amount);
     event BTCWithdrawn(address indexed to, uint256 amount);
+    event GuardianProposed(address indexed guardian);
     event GuardianChanged(address indexed guardian);
     event CreationPaused(bool paused);
-    event CapsChanged(uint256 maxPerPacket, uint256 maxOutstanding);
+    event CapsChanged(uint256 maxPerPacket, uint256 maxPerSender, uint256 maxOutstanding);
 
     error NotGuardian();
     error Paused();
@@ -154,6 +161,10 @@ contract Hongbao is EIP712, ReentrancyGuard {
     error ShareTooSmall();
     error OverPacketCap();
     error OverOutstandingCap();
+    error OverSenderCap();
+    error BadRecipient();
+    error WrongRelayer();
+    error NotPendingGuardian();
     error BadValue();
     error UnknownPacket();
     error PacketClosed();
@@ -168,6 +179,7 @@ contract Hongbao is EIP712, ReentrancyGuard {
     error NothingToWithdraw();
     error BTCTransferFailed();
     error CapAboveHardCap();
+    error OracleUnavailable();
 
     modifier onlyGuardian() {
         if (msg.sender != guardian) revert NotGuardian();
@@ -185,7 +197,11 @@ contract Hongbao is EIP712, ReentrancyGuard {
         address treasury;
         address guardian;
         uint256 feeBps;
+        uint256 maxPerPacket;
+        uint256 maxPerSender;
+        uint256 maxOutstanding;
         uint256 hardMaxPerPacket;
+        uint256 hardMaxPerSender;
         uint256 hardMaxOutstanding;
     }
 
@@ -207,13 +223,19 @@ contract Hongbao is EIP712, ReentrancyGuard {
         poolFactory = w.poolFactory;
         treasury = w.treasury;
         feeBps = w.feeBps;
+        if (
+            w.maxPerPacket > w.hardMaxPerPacket || w.maxPerSender > w.hardMaxPerSender
+                || w.maxOutstanding > w.hardMaxOutstanding
+        ) revert CapAboveHardCap();
         hardMaxPerPacket = w.hardMaxPerPacket;
+        hardMaxPerSender = w.hardMaxPerSender;
         hardMaxOutstanding = w.hardMaxOutstanding;
-        maxPerPacket = w.hardMaxPerPacket;
-        maxOutstanding = w.hardMaxOutstanding;
+        maxPerPacket = w.maxPerPacket;
+        maxPerSender = w.maxPerSender;
+        maxOutstanding = w.maxOutstanding;
         guardian = w.guardian;
         emit GuardianChanged(w.guardian);
-        emit CapsChanged(w.hardMaxPerPacket, w.hardMaxOutstanding);
+        emit CapsChanged(w.maxPerPacket, w.maxPerSender, w.maxOutstanding);
     }
 
     // ------------------------------------------------------------------
@@ -254,7 +276,12 @@ contract Hongbao is EIP712, ReentrancyGuard {
         if (btcIn == 0 || msg.value < btcIn) revert BadValue();
         _checkGasKit(p, msg.value - btcIn);
 
-        uint256 price = priceFeed.fetchPrice(); // reverts if the oracle is stale
+        uint256 price;
+        try priceFeed.fetchPrice() returns (uint256 pr) {
+            price = pr;
+        } catch {
+            revert OracleUnavailable(); // stale (>60 s) or unavailable
+        }
         uint256 oracleMin = (btcIn * price / 1e18) * (10_000 - maxSlippageBps) / 10_000;
         uint256 floor = oracleMin > minMusdOut ? oracleMin : minMusdOut;
 
@@ -289,6 +316,7 @@ contract Hongbao is EIP712, ReentrancyGuard {
         if (net / p.shares < MIN_SHARE) revert ShareTooSmall();
         if (net > maxPerPacket) revert OverPacketCap();
         if (outstanding + net > maxOutstanding) revert OverOutstandingCap();
+        if (senderOutstanding[msg.sender] + net > maxPerSender) revert OverSenderCap();
 
         if (fee > 0) musd.safeTransfer(treasury, fee);
         musd.forceApprove(address(smusd), net);
@@ -308,6 +336,7 @@ contract Hongbao is EIP712, ReentrancyGuard {
             tipPerShare: p.tipPerShare
         });
         outstanding += net;
+        senderOutstanding[msg.sender] += net;
         totalVolume += net;
         if (!seenSender[msg.sender]) {
             seenSender[msg.sender] = true;
@@ -325,13 +354,16 @@ contract Hongbao is EIP712, ReentrancyGuard {
 
     /// @notice Claim one share of packet `id` for `recipient`. Anyone may submit;
     ///         the caller receives the packet's relay tip.
-    /// @param keySig EIP-712 Claim(id, recipient, payout) signed by the link key.
+    /// @param relayer The only address allowed to submit this claim (0 = anyone). Signed, so a
+    ///        copied transaction cannot steal the relay tip.
+    /// @param keySig EIP-712 Claim(id, recipient, payout, relayer) signed by the link key.
     /// @param attestDeadline Deadline of the attester's signature (ignored without an attester).
-    /// @param attestSig EIP-712 Attest(id, recipient, deadline) signed by the packet's attester, if any.
+    /// @param attestSig EIP-712 Attest(id, recipient, payout, deadline) signed by the packet's attester, if any.
     function claim(
         uint256 id,
         address recipient,
         Payout payout,
+        address relayer,
         bytes calldata keySig,
         uint256 attestDeadline,
         bytes calldata attestSig
@@ -341,16 +373,21 @@ contract Hongbao is EIP712, ReentrancyGuard {
         if (pk.refunded || pk.sharesLeft == 0) revert PacketClosed();
         if (block.timestamp >= pk.expiry) revert Expired();
         if (recipient == address(0)) revert ZeroAddress();
+        if (
+            recipient == address(this) || recipient == address(smusd) || recipient == address(gauge)
+                || recipient == address(musd) || recipient == btc
+        ) revert BadRecipient();
+        if (relayer != address(0) && msg.sender != relayer) revert WrongRelayer();
         if (claimed[id][recipient]) revert AlreadyClaimed();
 
-        bytes32 claimDigest = _hashTypedDataV4(keccak256(abi.encode(CLAIM_TYPEHASH, id, recipient, uint8(payout))));
-        if (ECDSA.recover(claimDigest, keySig) != pk.claimKey) revert BadSignature();
-
+        _requireSigner(
+            pk.claimKey, keccak256(abi.encode(CLAIM_TYPEHASH, id, recipient, uint8(payout), relayer)), keySig
+        );
         if (pk.attester != address(0)) {
             if (block.timestamp > attestDeadline) revert AttestationExpired();
-            bytes32 attestDigest =
-                _hashTypedDataV4(keccak256(abi.encode(ATTEST_TYPEHASH, id, recipient, attestDeadline)));
-            if (ECDSA.recover(attestDigest, attestSig) != pk.attester) revert BadSignature();
+            _requireSigner(
+                pk.attester, keccak256(abi.encode(ATTEST_TYPEHASH, id, recipient, uint8(payout), attestDeadline)), attestSig
+            );
         }
 
         // Effects
@@ -359,6 +396,7 @@ contract Hongbao is EIP712, ReentrancyGuard {
         pk.remaining -= uint128(amount);
         pk.sharesLeft -= 1;
         outstanding -= amount;
+        senderOutstanding[pk.sender] -= amount;
         totalClaims++;
         if (!seenRecipient[recipient]) {
             seenRecipient[recipient] = true;
@@ -403,6 +441,11 @@ contract Hongbao is EIP712, ReentrancyGuard {
         return Payout.Save;
     }
 
+    function _requireSigner(address expected, bytes32 structHash, bytes calldata sig) internal view {
+        (address got, ECDSA.RecoverError err,) = ECDSA.tryRecover(_hashTypedDataV4(structHash), sig);
+        if (err != ECDSA.RecoverError.NoError || got != expected) revert BadSignature();
+    }
+
     function _gaugeAlive() internal view returns (bool) {
         try gauge.voter() returns (address v) {
             try IVoter(v).isAlive(address(gauge)) returns (bool alive) {
@@ -435,6 +478,7 @@ contract Hongbao is EIP712, ReentrancyGuard {
         pk.remaining = 0;
         pk.sharesLeft = 0;
         outstanding -= amount;
+        senderOutstanding[to] -= amount;
 
         bool inKind;
         if (amount > 0) {
@@ -477,7 +521,11 @@ contract Hongbao is EIP712, ReentrancyGuard {
 
     function _sendBTC(address to, uint256 amount) internal {
         if (amount == 0) return;
-        (bool ok,) = to.call{value: amount, gas: BTC_SEND_GAS}("");
+        bool ok;
+        // Do not copy return data: a recipient cannot make the relayer pay for a return bomb.
+        assembly {
+            ok := call(BTC_SEND_GAS, to, amount, 0, 0, 0, 0)
+        }
         if (!ok) {
             pendingBTC[to] += amount;
             emit BTCDeferred(to, amount);
@@ -493,17 +541,29 @@ contract Hongbao is EIP712, ReentrancyGuard {
         emit CreationPaused(paused);
     }
 
-    function setCaps(uint256 perPacket, uint256 total) external onlyGuardian {
-        if (perPacket > hardMaxPerPacket || total > hardMaxOutstanding) revert CapAboveHardCap();
+    /// @notice Set caps, never above the hard caps fixed at deployment.
+    function setCaps(uint256 perPacket, uint256 perSender, uint256 total) external onlyGuardian {
+        if (perPacket > hardMaxPerPacket || perSender > hardMaxPerSender || total > hardMaxOutstanding) {
+            revert CapAboveHardCap();
+        }
         maxPerPacket = perPacket;
+        maxPerSender = perSender;
         maxOutstanding = total;
-        emit CapsChanged(perPacket, total);
+        emit CapsChanged(perPacket, perSender, total);
     }
 
-    function setGuardian(address next) external onlyGuardian {
+    /// @notice Two-step handover: the proposed guardian must accept.
+    function proposeGuardian(address next) external onlyGuardian {
         if (next == address(0)) revert ZeroAddress();
-        guardian = next;
-        emit GuardianChanged(next);
+        pendingGuardian = next;
+        emit GuardianProposed(next);
+    }
+
+    function acceptGuardian() external {
+        if (msg.sender != pendingGuardian) revert NotPendingGuardian();
+        guardian = msg.sender;
+        pendingGuardian = address(0);
+        emit GuardianChanged(msg.sender);
     }
 
     // ------------------------------------------------------------------
@@ -541,12 +601,20 @@ contract Hongbao is EIP712, ReentrancyGuard {
     }
 
     /// @notice Typed-data digest the link key must sign for a claim.
-    function claimDigest(uint256 id, address recipient, Payout payout) external view returns (bytes32) {
-        return _hashTypedDataV4(keccak256(abi.encode(CLAIM_TYPEHASH, id, recipient, uint8(payout))));
+    function claimDigest(uint256 id, address recipient, Payout payout, address relayer)
+        external
+        view
+        returns (bytes32)
+    {
+        return _hashTypedDataV4(keccak256(abi.encode(CLAIM_TYPEHASH, id, recipient, uint8(payout), relayer)));
     }
 
     /// @notice Typed-data digest the attester must sign for a claim.
-    function attestDigest(uint256 id, address recipient, uint256 deadline) external view returns (bytes32) {
-        return _hashTypedDataV4(keccak256(abi.encode(ATTEST_TYPEHASH, id, recipient, deadline)));
+    function attestDigest(uint256 id, address recipient, Payout payout, uint256 deadline)
+        external
+        view
+        returns (bytes32)
+    {
+        return _hashTypedDataV4(keccak256(abi.encode(ATTEST_TYPEHASH, id, recipient, uint8(payout), deadline)));
     }
 }

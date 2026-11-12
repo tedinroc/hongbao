@@ -64,8 +64,12 @@ contract HongbaoTest is Test {
                 treasury: treasury,
                 guardian: guardian,
                 feeBps: 100,
-                hardMaxPerPacket: 50e18,
-                hardMaxOutstanding: 500e18
+                maxPerPacket: 50e18,
+                maxPerSender: 1_000e18,
+                maxOutstanding: 500e18,
+                hardMaxPerPacket: 100e18,
+                hardMaxPerSender: 1_000e18,
+                hardMaxOutstanding: 5_000e18
             })
         );
 
@@ -101,9 +105,9 @@ contract HongbaoTest is Test {
     }
 
     function _claim(uint256 id, address to, Hongbao.Payout payout) internal returns (uint256 amt, Hongbao.Payout paid) {
-        bytes memory sig = _sig(keyPk, hb.claimDigest(id, to, payout));
+        bytes memory sig = _sig(keyPk, hb.claimDigest(id, to, payout, relayer));
         vm.prank(relayer);
-        (amt, paid) = hb.claim(id, to, payout, sig, 0, "");
+        (amt, paid) = hb.claim(id, to, payout, relayer, sig, 0, "");
     }
 
     // ------------------------------------------------------------------ create
@@ -150,7 +154,7 @@ contract HongbaoTest is Test {
         hb.create{value: 10 * uint256(DRIP + TIP)}(20e18, p);
 
         p = _params(10);
-        p.expiry = uint64(block.timestamp + 31 days);
+        p.expiry = uint64(block.timestamp + 8 days);
         vm.expectRevert(Hongbao.BadExpiry.selector);
         hb.create{value: 10 * uint256(DRIP + TIP)}(20e18, p);
 
@@ -280,44 +284,44 @@ contract HongbaoTest is Test {
     function test_claimRejections() public {
         uint256 id = _create(20e18, 2);
         address r = makeAddr("r");
-        bytes memory sig = _sig(keyPk, hb.claimDigest(id, r, Hongbao.Payout.Stake));
+        bytes memory sig = _sig(keyPk, hb.claimDigest(id, r, Hongbao.Payout.Stake, address(0)));
 
         vm.expectRevert(Hongbao.UnknownPacket.selector);
-        hb.claim(99, r, Hongbao.Payout.Stake, sig, 0, "");
+        hb.claim(99, r, Hongbao.Payout.Stake, address(0), sig, 0, "");
 
         // signature for one payout cannot be used for another
         vm.expectRevert(Hongbao.BadSignature.selector);
-        hb.claim(id, r, Hongbao.Payout.Cash, sig, 0, "");
+        hb.claim(id, r, Hongbao.Payout.Cash, address(0), sig, 0, "");
 
         // signature for one recipient cannot redirect to another
         vm.expectRevert(Hongbao.BadSignature.selector);
-        hb.claim(id, makeAddr("thief"), Hongbao.Payout.Stake, sig, 0, "");
+        hb.claim(id, makeAddr("thief"), Hongbao.Payout.Stake, address(0), sig, 0, "");
 
         // wrong key
-        bytes memory bad = _sig(0xBAD, hb.claimDigest(id, r, Hongbao.Payout.Stake));
+        bytes memory bad = _sig(0xBAD, hb.claimDigest(id, r, Hongbao.Payout.Stake, address(0)));
         vm.expectRevert(Hongbao.BadSignature.selector);
-        hb.claim(id, r, Hongbao.Payout.Stake, bad, 0, "");
+        hb.claim(id, r, Hongbao.Payout.Stake, address(0), bad, 0, "");
 
-        hb.claim(id, r, Hongbao.Payout.Stake, sig, 0, "");
+        hb.claim(id, r, Hongbao.Payout.Stake, address(0), sig, 0, "");
         vm.expectRevert(Hongbao.AlreadyClaimed.selector);
-        hb.claim(id, r, Hongbao.Payout.Stake, sig, 0, "");
+        hb.claim(id, r, Hongbao.Payout.Stake, address(0), sig, 0, "");
 
         vm.expectRevert(Hongbao.ZeroAddress.selector);
-        hb.claim(id, address(0), Hongbao.Payout.Stake, sig, 0, "");
+        hb.claim(id, address(0), Hongbao.Payout.Stake, address(0), sig, 0, "");
 
         _claim(id, makeAddr("r2"), Hongbao.Payout.Save);
-        bytes memory sig3 = _sig(keyPk, hb.claimDigest(id, makeAddr("r3"), Hongbao.Payout.Save));
+        bytes memory sig3 = _sig(keyPk, hb.claimDigest(id, makeAddr("r3"), Hongbao.Payout.Save, address(0)));
         vm.expectRevert(Hongbao.PacketClosed.selector);
-        hb.claim(id, makeAddr("r3"), Hongbao.Payout.Save, sig3, 0, "");
+        hb.claim(id, makeAddr("r3"), Hongbao.Payout.Save, address(0), sig3, 0, "");
     }
 
     function test_claimAfterExpiryReverts() public {
         uint256 id = _create(20e18, 2);
         address r = makeAddr("r");
-        bytes memory sig = _sig(keyPk, hb.claimDigest(id, r, Hongbao.Payout.Stake));
+        bytes memory sig = _sig(keyPk, hb.claimDigest(id, r, Hongbao.Payout.Stake, address(0)));
         vm.warp(block.timestamp + 1 days);
         vm.expectRevert(Hongbao.Expired.selector);
-        hb.claim(id, r, Hongbao.Payout.Stake, sig, 0, "");
+        hb.claim(id, r, Hongbao.Payout.Stake, address(0), sig, 0, "");
     }
 
     function test_attesterRequired() public {
@@ -326,28 +330,28 @@ contract HongbaoTest is Test {
         vm.prank(alice);
         uint256 id = hb.create{value: 2 * uint256(DRIP + TIP)}(20e18, p);
         address r = makeAddr("r");
-        bytes memory sig = _sig(keyPk, hb.claimDigest(id, r, Hongbao.Payout.Stake));
+        bytes memory sig = _sig(keyPk, hb.claimDigest(id, r, Hongbao.Payout.Stake, address(0)));
 
         vm.expectRevert(); // empty attestation
-        hb.claim(id, r, Hongbao.Payout.Stake, sig, block.timestamp + 60, "");
+        hb.claim(id, r, Hongbao.Payout.Stake, address(0), sig, block.timestamp + 60, "");
 
         uint256 dl = block.timestamp + 60;
-        bytes memory wrongAtt = _sig(keyPk, hb.attestDigest(id, r, dl));
+        bytes memory wrongAtt = _sig(keyPk, hb.attestDigest(id, r, Hongbao.Payout.Stake, dl));
         vm.expectRevert(Hongbao.BadSignature.selector);
-        hb.claim(id, r, Hongbao.Payout.Stake, sig, dl, wrongAtt);
+        hb.claim(id, r, Hongbao.Payout.Stake, address(0), sig, dl, wrongAtt);
 
-        bytes memory att = _sig(attesterPk, hb.attestDigest(id, r, dl));
+        bytes memory att = _sig(attesterPk, hb.attestDigest(id, r, Hongbao.Payout.Stake, dl));
         // attestation for r cannot be reused for another recipient
-        bytes memory sigOther = _sig(keyPk, hb.claimDigest(id, makeAddr("o"), Hongbao.Payout.Stake));
+        bytes memory sigOther = _sig(keyPk, hb.claimDigest(id, makeAddr("o"), Hongbao.Payout.Stake, address(0)));
         vm.expectRevert(Hongbao.BadSignature.selector);
-        hb.claim(id, makeAddr("o"), Hongbao.Payout.Stake, sigOther, dl, att);
+        hb.claim(id, makeAddr("o"), Hongbao.Payout.Stake, address(0), sigOther, dl, att);
 
         vm.warp(dl + 1);
         vm.expectRevert(Hongbao.AttestationExpired.selector);
-        hb.claim(id, r, Hongbao.Payout.Stake, sig, dl, att);
+        hb.claim(id, r, Hongbao.Payout.Stake, address(0), sig, dl, att);
 
         vm.warp(dl - 30);
-        hb.claim(id, r, Hongbao.Payout.Stake, sig, dl, att);
+        hb.claim(id, r, Hongbao.Payout.Stake, address(0), sig, dl, att);
         assertEq(gauge.balanceOf(r), 9.9e18);
     }
 
@@ -493,7 +497,7 @@ contract HongbaoTest is Test {
         router.setRate(74_000e18, 9950);
         feed.set(74_000e18, true);
         vm.prank(alice);
-        vm.expectRevert(bytes("PriceFeed: Oracle is stale."));
+        vm.expectRevert(Hongbao.OracleUnavailable.selector);
         hb.createWithBTC{value: btcIn + kits}(btcIn, 0, 100, p);
     }
 
@@ -528,13 +532,112 @@ contract HongbaoTest is Test {
         vm.startPrank(guardian);
         hb.setCreationPaused(false);
         vm.expectRevert(Hongbao.CapAboveHardCap.selector);
-        hb.setCaps(51e18, 500e18);
-        hb.setCaps(10e18, 100e18);
+        hb.setCaps(101e18, 500e18, 500e18);
+        hb.setCaps(10e18, 100e18, 100e18);
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectRevert(Hongbao.OverPacketCap.selector);
         hb.create{value: 2 * uint256(DRIP + TIP)}(20e18, p);
+    }
+
+    // ------------------------------------------------------------------ review fixes
+
+    function test_relayerBindingStopsTipTheft() public {
+        uint256 id = _create(20e18, 2);
+        address r = makeAddr("r");
+        bytes memory sig = _sig(keyPk, hb.claimDigest(id, r, Hongbao.Payout.Stake, relayer));
+        address bot = makeAddr("bot");
+        vm.prank(bot);
+        vm.expectRevert(Hongbao.WrongRelayer.selector);
+        hb.claim(id, r, Hongbao.Payout.Stake, relayer, sig, 0, "");
+        // the bot cannot rewrite the relayer field either: the signature covers it
+        vm.prank(bot);
+        vm.expectRevert(Hongbao.BadSignature.selector);
+        hb.claim(id, r, Hongbao.Payout.Stake, bot, sig, 0, "");
+        vm.prank(relayer);
+        hb.claim(id, r, Hongbao.Payout.Stake, relayer, sig, 0, "");
+        assertEq(relayer.balance, TIP);
+    }
+
+    function test_attestationBindsPayout() public {
+        Hongbao.CreateParams memory p = _params(2);
+        p.attester = attester;
+        vm.prank(alice);
+        uint256 id = hb.create{value: 2 * uint256(DRIP + TIP)}(20e18, p);
+        address victim = makeAddr("victim");
+        uint256 dl = block.timestamp + 60;
+        bytes memory att = _sig(attesterPk, hb.attestDigest(id, victim, Hongbao.Payout.Stake, dl));
+        // another link holder tries to switch the victim to Cash with the victim's attestation
+        bytes memory cashSig = _sig(keyPk, hb.claimDigest(id, victim, Hongbao.Payout.Cash, address(0)));
+        vm.expectRevert(Hongbao.BadSignature.selector);
+        hb.claim(id, victim, Hongbao.Payout.Cash, address(0), cashSig, dl, att);
+        bytes memory stakeSig = _sig(keyPk, hb.claimDigest(id, victim, Hongbao.Payout.Stake, address(0)));
+        hb.claim(id, victim, Hongbao.Payout.Stake, address(0), stakeSig, dl, att);
+        assertEq(gauge.balanceOf(victim), 9.9e18);
+    }
+
+    function test_protocolAddressesCannotReceive() public {
+        uint256 id = _create(20e18, 2);
+        address[5] memory bad = [address(hb), address(smusd), address(gauge), address(musd), address(btc)];
+        for (uint256 i; i < bad.length; i++) {
+            bytes memory sig = _sig(keyPk, hb.claimDigest(id, bad[i], Hongbao.Payout.Cash, address(0)));
+            vm.expectRevert(Hongbao.BadRecipient.selector);
+            hb.claim(id, bad[i], Hongbao.Payout.Cash, address(0), sig, 0, "");
+        }
+    }
+
+    function test_perSenderCapStopsCapGrief() public {
+        vm.prank(guardian);
+        hb.setCaps(50e18, 100e18, 500e18);
+        _create(50e18, 5);
+        _create(50e18, 5);
+        Hongbao.CreateParams memory p = _params(5);
+        vm.prank(alice);
+        vm.expectRevert(Hongbao.OverSenderCap.selector);
+        hb.create{value: 5 * uint256(DRIP + TIP)}(10e18, p);
+        // another sender is unaffected
+        address carol = makeAddr("carol");
+        musd.mint(carol, 100e18);
+        vm.deal(carol, 1 ether);
+        vm.startPrank(carol);
+        musd.approve(address(hb), type(uint256).max);
+        hb.create{value: 5 * uint256(DRIP + TIP)}(10e18, p);
+        vm.stopPrank();
+        // claims and refunds free the sender's room again
+        vm.prank(alice);
+        hb.refund(1);
+        vm.prank(alice);
+        hb.create{value: 5 * uint256(DRIP + TIP)}(10e18, p);
+        assertEq(hb.senderOutstanding(alice), 49.5e18 + 9.9e18);
+    }
+
+    function test_twoStepGuardian() public {
+        address next = makeAddr("next");
+        vm.prank(guardian);
+        hb.proposeGuardian(next);
+        assertEq(hb.guardian(), guardian);
+        vm.prank(makeAddr("x"));
+        vm.expectRevert(Hongbao.NotPendingGuardian.selector);
+        hb.acceptGuardian();
+        vm.prank(next);
+        hb.acceptGuardian();
+        assertEq(hb.guardian(), next);
+        assertEq(hb.pendingGuardian(), address(0));
+    }
+
+    function test_malformedSignatureIsBadSignature() public {
+        uint256 id = _create(20e18, 2);
+        vm.expectRevert(Hongbao.BadSignature.selector);
+        hb.claim(id, makeAddr("r"), Hongbao.Payout.Save, address(0), hex"1234", 0, "");
+    }
+
+    function test_returnBombDoesNotCostRelayer() public {
+        uint256 id = _create(20e18, 2);
+        ReturnBomb rb = new ReturnBomb();
+        _claim(id, address(rb), Hongbao.Payout.Save);
+        assertEq(hb.pendingBTC(address(rb)), 0, "bomb accepted the BTC");
+        assertEq(address(rb).balance, DRIP);
     }
 
     // ------------------------------------------------------------------ fuzz
@@ -560,5 +663,13 @@ contract HongbaoTest is Test {
         assertEq(paidOut + refunded, net, "every MUSD is paid or refunded");
         assertEq(hb.outstanding(), 0);
         assertEq(address(hb).balance, 0, "every gas kit is spent or returned");
+    }
+}
+
+contract ReturnBomb {
+    receive() external payable {
+        assembly {
+            return(0, 100000)
+        }
     }
 }

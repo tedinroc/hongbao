@@ -23,8 +23,12 @@ contract Deploy is Script {
                 treasury: treasury,
                 guardian: guardian,
                 feeBps: 100,
-                hardMaxPerPacket: 50e18,
-                hardMaxOutstanding: 500e18
+                maxPerPacket: 50e18,
+                maxPerSender: 100e18,
+                maxOutstanding: 500e18,
+                hardMaxPerPacket: 100e18,
+                hardMaxPerSender: 500e18,
+                hardMaxOutstanding: 5_000e18
             });
         } else if (chainId == 31611) {
             // Mezo testnet (Matsnet)
@@ -39,8 +43,12 @@ contract Deploy is Script {
                 treasury: treasury,
                 guardian: guardian,
                 feeBps: 100,
+                maxPerPacket: 1_000e18,
+                maxPerSender: 2_000e18,
+                maxOutstanding: 20_000e18,
                 hardMaxPerPacket: 1_000e18,
-                hardMaxOutstanding: 20_000e18
+                hardMaxPerSender: 5_000e18,
+                hardMaxOutstanding: 50_000e18
             });
         } else {
             revert("unsupported chain");

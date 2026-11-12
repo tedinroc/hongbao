@@ -26,8 +26,8 @@ echo "Hongbao: $HONGBAO"
 BLOCK="$(cast receipt "$(jq -r '.transactions[0].hash' broadcast/Deploy.s.sol/$CHAIN/run-latest.json)" blockNumber --rpc-url $RPC 2>/dev/null || echo null)"
 
 echo "verifying on the Mezo testnet explorer..."
-ARGS="$(cast abi-encode 'f((address,address,address,address,address,address,address,address,address,uint256,uint256,uint256))' \
-  "($MUSD,0x6f461c68B2c5492C0F5CCEc5a264d692aA7A8e16,0xA6972f35550717280f2538EA77638B29073e3F07,0x86bCF0841622a5dAC14A313a15f96A95421b9366,$ROUTER,$BTC,$FACTORY,$ME,$ME,100,1000000000000000000000,20000000000000000000000)")"
+ARGS="$(cast abi-encode 'f((address,address,address,address,address,address,address,address,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256))' \
+  "($MUSD,0x6f461c68B2c5492C0F5CCEc5a264d692aA7A8e16,0xA6972f35550717280f2538EA77638B29073e3F07,0x86bCF0841622a5dAC14A313a15f96A95421b9366,$ROUTER,$BTC,$FACTORY,${TREASURY:-$ME},${GUARDIAN:-$ME},100,1000000000000000000000,2000000000000000000000,20000000000000000000000,1000000000000000000000,5000000000000000000000,50000000000000000000000)")"
 forge verify-contract "$HONGBAO" src/Hongbao.sol:Hongbao --chain-id $CHAIN \
   --verifier blockscout --verifier-url https://api.explorer.test.mezo.org/api/ \
   --constructor-args "$ARGS" --watch 2>&1 | tail -3 || echo "verification needs a retry"

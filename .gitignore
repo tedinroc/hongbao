@@ -17,3 +17,4 @@ contracts/test/audit_*/
 web/.wrangler/
 raw/
 video/
+ops/audit-pocs/

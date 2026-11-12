@@ -25,8 +25,10 @@ interface IVoter {
 }
 
 /// @notice MUSD system PriceFeed: USD per BTC, 1e18-scaled. Reverts when stale (>60s).
+/// @dev Declared non-view on purpose: Mezo's own interface is non-view and the PriceFeed is an
+///      upgradeable proxy, so a future implementation may write state (Liquity-style lastGoodPrice).
 interface IPriceFeed {
-    function fetchPrice() external view returns (uint256);
+    function fetchPrice() external returns (uint256);
 }
 
 /// @notice Tigris (Velodrome-style) router on Mezo.
