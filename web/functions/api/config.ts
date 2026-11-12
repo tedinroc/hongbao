@@ -15,10 +15,10 @@ export async function handleConfig(ctx: Ctx): Promise<Response> {
   try {
     if (request.method === "OPTIONS") throw new ApiError("Forbidden", 403);
     if (request.method !== "GET" && request.method !== "HEAD") return methodNotAllowed("GET, HEAD");
-    const relayer = relayerSigner(env)?.address ?? null;
     const attester = attesterSigner(env)?.address ?? null;
     const chains = {} as Record<string, ApiChainConfig>;
     for (const id of SUPPORTED_CHAINS) {
+      const relayer = relayerSigner(env, id)?.address ?? null;
       const db = deployBlock(env, id);
       chains[String(id)] = {
         chainId: id,

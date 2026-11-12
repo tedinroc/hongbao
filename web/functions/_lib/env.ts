@@ -8,6 +8,9 @@ import { privateKeyToAddress } from "viem/accounts";
  */
 export interface Env {
   RELAYER_PRIVATE_KEY?: string;
+  /** Optional per-chain relayer keys; fall back to RELAYER_PRIVATE_KEY. */
+  RELAYER_PRIVATE_KEY_31611?: string;
+  RELAYER_PRIVATE_KEY_31612?: string;
   ATTESTER_PRIVATE_KEY?: string;
   /** KV namespace for rate limits. Without it limits live in per-isolate memory. */
   HB_LIMITS?: KVNamespace;
@@ -59,8 +62,10 @@ function signerFrom(raw: string | undefined): Signer | null {
   return s;
 }
 
-export function relayerSigner(env: Env): Signer | null {
-  return signerFrom(env.RELAYER_PRIVATE_KEY);
+export function relayerSigner(env: Env, chainId?: number): Signer | null {
+  const perChain =
+    chainId === 31611 ? env.RELAYER_PRIVATE_KEY_31611 : chainId === 31612 ? env.RELAYER_PRIVATE_KEY_31612 : undefined;
+  return signerFrom(perChain || env.RELAYER_PRIVATE_KEY);
 }
 
 export function attesterSigner(env: Env): Signer | null {

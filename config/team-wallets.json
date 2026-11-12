@@ -20,6 +20,10 @@
     {
       "address": "0x023CeAc4f5db03F2402dA5Eaa0f3E5288ABf7f39",
       "label": "test recipient (live relayer check)"
+    },
+    {
+      "address": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
+      "label": "mainnet relayer"
     }
   ]
 }

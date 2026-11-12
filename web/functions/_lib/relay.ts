@@ -168,7 +168,7 @@ export async function relayClaim(env: Env, input: ClaimInput): Promise<ApiClaimR
 
   if (!chainEnabled(env, chainId)) throw new ApiError("ChainDisabled", 503);
   const hongbao = hongbaoAddress(env, chainId) as Address;
-  const relayer = relayerSigner(env);
+  const relayer = relayerSigner(env, chainId);
   if (!relayer) throw new ApiError("RelayerNotConfigured", 503);
   // We submit claim(..., relayer = our address, ...); a link signature bound to another
   // relayer (or to "anyone", address 0) would only fail on chain as BadSignature.
