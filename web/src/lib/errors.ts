@@ -23,6 +23,11 @@ export const KNOWN_CODES = [
   'ShareTooSmall',
   'OverPacketCap',
   'OverOutstandingCap',
+  'OverSenderCap',
+  'BadRecipient',
+  'WrongRelayer',
+  'OracleUnavailable',
+  'NotPendingGuardian',
   'BadValue',
   'NotRefundable',
   'SlippageTooHigh',
@@ -38,8 +43,11 @@ export const KNOWN_CODES = [
   'NotAuthorized',
   'InsufficientOutputAmount',
   'OracleStale',
+  // Mezo loan (lib/trove.ts re-checks the loan before withdrawMUSD)
+  'LoanBlocked',
   // Relayer / API (functions/_lib/errors.ts)
   'RateLimited',
+  'TipTooLow',
   'ForeignAttester',
   'ChainDisabled',
   'NotDeployed',
@@ -143,6 +151,8 @@ function searchText(text: string): ErrorCode | null {
     }
   }
   if (/Oracle is stale/i.test(text)) return 'OracleStale';
+  // Mezo's BorrowerOperations reverts with require strings such as "BorrowerOps: An operation that would result in ICR < MCR is not permitted".
+  if (/BorrowerOps:|TroveManager:/.test(text)) return 'LoanBlocked';
   if (/user (rejected|denied)|rejected the request|request rejected/i.test(text)) return 'UserRejected';
   if (/insufficient funds/i.test(text)) return 'InsufficientFunds';
   if (/failed to fetch|networkerror|network request failed|load failed|timed? ?out/i.test(text)) return 'Network';

@@ -10,7 +10,7 @@ import { chainInfo, defaultChainId, publicClient, type ChainId } from '../lib/ch
 import { packetsBySender, type CreatedEvent } from '../lib/chainData';
 import { hongbaoAbi } from '../abi/hongbao';
 import { isPrivateKey } from '../lib/eip712';
-import { fmtBtc, fmtMusd, formatDuration } from '../lib/format';
+import { cleanMessage, fmtBtc, fmtMusd, formatDuration } from '../lib/format';
 import { useAsync, useNow } from '../lib/hooks';
 import { useWallet } from '../lib/walletContext';
 import type { WalletHandle } from '../lib/wallet';
@@ -95,8 +95,8 @@ function Bal({ label, value, unit }: { label: string; value: string | null; unit
   return (
     <div className="balance">
       <div className="balance-label">{label}</div>
-      <div className="balance-value">
-        {value === null ? <span className="skeleton" /> : value} <span className="tiny faint">{unit}</span>
+      <div className={`balance-value ${value && value.length > 8 ? 'balance-value-long' : ''}`}>
+        {value === null ? <span className="skeleton" /> : value} <span className="balance-unit">{unit}</span>
       </div>
     </div>
   );
@@ -137,7 +137,7 @@ function MyPackets({ chainId, wallet }: { chainId: ChainId; wallet: WalletHandle
     <section className="stack">
       <div className="row-between">
         <h2 className="section-title">{t('me.sent')}</h2>
-        <button type="button" className="btn btn-quiet btn-sm" onClick={list.reload} aria-label={t('common.retry')}>
+        <button type="button" className="btn btn-quiet btn-sm" onClick={list.reload} aria-label={t('ledger.refresh')}>
           <IconRefresh />
         </button>
       </div>
@@ -168,20 +168,19 @@ function MyPackets({ chainId, wallet }: { chainId: ChainId; wallet: WalletHandle
               <li key={p.ev.id.toString()} className="list-item">
                 <div className="row-between">
                   <span className="row" style={{ gap: 8 }}>
-                    <b>{t('me.packet', { id: p.ev.id.toString() })}</b>
+                    <Link className="list-title" to={`/c/${chainId}/${p.ev.id.toString()}`}>
+                      {t('me.packet', { id: p.ev.id.toString() })}
+                    </Link>
                     <span className={`chip ${status === 'me.status.open' ? 'chip-ok' : ''}`}>{t(status)}</span>
                   </span>
                   <span className="mono">{fmtMusd(p.ev.net)} MUSD</span>
                 </div>
-                <div className="small muted">“{p.ev.message}”</div>
-                <div className="row-between small muted">
-                  <span>
-                    {t('me.opened', { opened: p.ev.shares - p.sharesLeft, total: p.ev.shares })}
-                    {!expired && !p.refunded && p.sharesLeft > 0 ? (
-                      <> · {t('claim.expiresIn', { time: formatDuration(Number(p.ev.expiry) - now, t) })}</>
-                    ) : null}
-                  </span>
-                  <Link to={`/c/${chainId}/${p.ev.id.toString()}`}>#{p.ev.id.toString()}</Link>
+                <div className="small muted">{t('common.quote', { text: cleanMessage(p.ev.message) })}</div>
+                <div className="small muted">
+                  {t('me.opened', { opened: p.ev.shares - p.sharesLeft, total: p.ev.shares })}
+                  {!expired && !p.refunded && p.sharesLeft > 0 ? (
+                    <> · {t('claim.expiresIn', { time: formatDuration(Number(p.ev.expiry) - now, t) })}</>
+                  ) : null}
                 </div>
                 {canRefund ? (
                   <button

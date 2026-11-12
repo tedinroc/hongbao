@@ -70,7 +70,7 @@ export function WalletSummary({ onPick }: { onPick: () => void }) {
   if (!active) {
     return (
       <div className="stack-sm">
-        <button type="button" className="btn btn-primary btn-block" onClick={onPick}>
+        <button type="button" className="btn btn-ghost btn-block" onClick={onPick}>
           <IconWallet />
           {t('wallet.connect')}
         </button>
@@ -85,14 +85,14 @@ export function WalletSummary({ onPick }: { onPick: () => void }) {
       </div>
       <div className="wallet-meta">
         <div className="wallet-name">{isBurner ? t('wallet.thisPhone') : active.name}</div>
-        <div className="wallet-addr row" style={{ gap: 8 }} title={active.address}>
-          {shortAddress(active.address)}
+        <div className="wallet-addr row wrap" style={{ gap: '4px 8px' }} title={active.address}>
+          <span className="nowrap">{shortAddress(active.address)}</span>
           {isBurner && burner && !burner.backedUp ? <span className="chip chip-gold">{t('wallet.notBackedUp')}</span> : null}
         </div>
       </div>
       {isBurner ? (
         <button type="button" className="btn btn-quiet btn-sm" onClick={onPick}>
-          {t('wallet.useOwn')}
+          {t('wallet.change')}
         </button>
       ) : (
         <button type="button" className="btn btn-quiet btn-sm" onClick={disconnect}>

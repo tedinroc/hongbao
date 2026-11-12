@@ -59,7 +59,27 @@ export const hongbaoAbi = [
             "internalType": "uint256"
           },
           {
+            "name": "maxPerPacket",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxPerSender",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxOutstanding",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "hardMaxPerPacket",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "hardMaxPerSender",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -218,6 +238,13 @@ export const hongbaoAbi = [
   },
   {
     "type": "function",
+    "name": "acceptGuardian",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "attestDigest",
     "inputs": [
       {
@@ -229,6 +256,11 @@ export const hongbaoAbi = [
         "name": "recipient",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "payout",
+        "type": "uint8",
+        "internalType": "enum Hongbao.Payout"
       },
       {
         "name": "deadline",
@@ -278,6 +310,11 @@ export const hongbaoAbi = [
         "internalType": "enum Hongbao.Payout"
       },
       {
+        "name": "relayer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "keySig",
         "type": "bytes",
         "internalType": "bytes"
@@ -325,6 +362,11 @@ export const hongbaoAbi = [
         "name": "payout",
         "type": "uint8",
         "internalType": "enum Hongbao.Payout"
+      },
+      {
+        "name": "relayer",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [
@@ -780,6 +822,19 @@ export const hongbaoAbi = [
   },
   {
     "type": "function",
+    "name": "hardMaxPerSender",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "maxOutstanding",
     "inputs": [],
     "outputs": [
@@ -794,6 +849,19 @@ export const hongbaoAbi = [
   {
     "type": "function",
     "name": "maxPerPacket",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxPerSender",
     "inputs": [],
     "outputs": [
       {
@@ -883,6 +951,19 @@ export const hongbaoAbi = [
   },
   {
     "type": "function",
+    "name": "pendingGuardian",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "poolFactory",
     "inputs": [],
     "outputs": [
@@ -906,6 +987,19 @@ export const hongbaoAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "proposeGuardian",
+    "inputs": [
+      {
+        "name": "next",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -973,10 +1067,34 @@ export const hongbaoAbi = [
   },
   {
     "type": "function",
+    "name": "senderOutstanding",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "setCaps",
     "inputs": [
       {
         "name": "perPacket",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "perSender",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -997,19 +1115,6 @@ export const hongbaoAbi = [
         "name": "paused",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setGuardian",
-    "inputs": [
-      {
-        "name": "next",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -1200,6 +1305,12 @@ export const hongbaoAbi = [
         "internalType": "uint256"
       },
       {
+        "name": "maxPerSender",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
         "name": "maxOutstanding",
         "type": "uint256",
         "indexed": false,
@@ -1267,6 +1378,19 @@ export const hongbaoAbi = [
   {
     "type": "event",
     "name": "GuardianChanged",
+    "inputs": [
+      {
+        "name": "guardian",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GuardianProposed",
     "inputs": [
       {
         "name": "guardian",
@@ -1448,6 +1572,11 @@ export const hongbaoAbi = [
   },
   {
     "type": "error",
+    "name": "BadRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "BadShares",
     "inputs": []
   },
@@ -1465,33 +1594,6 @@ export const hongbaoAbi = [
     "type": "error",
     "name": "CapAboveHardCap",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ECDSAInvalidSignature",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ECDSAInvalidSignatureLength",
-    "inputs": [
-      {
-        "name": "length",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "ECDSAInvalidSignatureS",
-    "inputs": [
-      {
-        "name": "s",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ]
   },
   {
     "type": "error",
@@ -1525,6 +1627,11 @@ export const hongbaoAbi = [
   },
   {
     "type": "error",
+    "name": "NotPendingGuardian",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NotRefundable",
     "inputs": []
   },
@@ -1535,12 +1642,22 @@ export const hongbaoAbi = [
   },
   {
     "type": "error",
+    "name": "OracleUnavailable",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "OverOutstandingCap",
     "inputs": []
   },
   {
     "type": "error",
     "name": "OverPacketCap",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OverSenderCap",
     "inputs": []
   },
   {
@@ -1593,6 +1710,11 @@ export const hongbaoAbi = [
   {
     "type": "error",
     "name": "UnknownPacket",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WrongRelayer",
     "inputs": []
   },
   {

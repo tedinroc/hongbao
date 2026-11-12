@@ -32,7 +32,7 @@ export function Landing() {
   const chainId = defaultChainId();
   const info = chainInfo(chainId);
   const [payload, setPayload] = useState<StatsPayload>(() => snapshotFor(chainId));
-  const [source, setSource] = useState<'snapshot' | 'live'>('snapshot');
+  const [source, setSource] = useState<'snapshot' | 'live' | 'failed'>('snapshot');
   const [fee, setFee] = useState<bigint>(100n);
 
   useEffect(() => {
@@ -48,7 +48,10 @@ export function Landing() {
       } catch {
         /* fall back to a direct chain read */
       }
-      if (!info.hongbao) return;
+      if (!info.hongbao) {
+        if (live) setSource('failed');
+        return;
+      }
       try {
         const s = await readStatsChain(chainId);
         if (live) {
@@ -57,6 +60,7 @@ export function Landing() {
         }
       } catch {
         /* keep the snapshot */
+        if (live) setSource('failed');
       }
     })();
     if (info.hongbao) {
@@ -71,6 +75,9 @@ export function Landing() {
 
   const s = payload.stats;
   const a = info.addresses;
+  // A snapshot with no date is the empty placeholder: show placeholders, not a row of zeros.
+  const blank = source !== 'live' && payload.updatedAt === null;
+  const num = (v: string) => (blank ? source === 'failed' ? '—' : <span className="skeleton" /> : v);
   const contracts: { key: string; name: MessageKey; body: MessageKey; address: Address | null; icon: Icon }[] = [
     { key: 'smusd', name: 'contracts.smusd', body: 'contracts.smusd.body', address: a.smusd, icon: IconVault },
     { key: 'gauge', name: 'contracts.gauge', body: 'contracts.gauge.body', address: a.gauge, icon: IconGauge },
@@ -82,8 +89,10 @@ export function Landing() {
 
   return (
     <div className="stack-lg">
+      {/* Phone order: copy and CTA, then the envelope (so it shows in the first screen), then the facts.
+          Wide screens: copy and facts on the left, the envelope on the right. */}
       <section className="hero">
-        <div>
+        <div className="hero-copy">
           <div className="eyebrow">{t('landing.eyebrow')}</div>
           <h1 className="hero-title">
             {t('landing.title1')}
@@ -95,25 +104,12 @@ export function Landing() {
               <IconEnvelope />
               {t('landing.ctaSend')}
             </Link>
-            <Link to="/ledger" className="btn btn-ghost btn-lg">
+            <Link to="/ledger" className="btn btn-quiet btn-lg hero-ledger">
               <IconLedger />
               {t('landing.ctaLedger')}
+              <IconArrowRight />
             </Link>
           </div>
-          <ul className="hero-facts">
-            <li>
-              <IconShield />
-              {t('landing.fact1')}
-            </li>
-            <li>
-              <IconShield />
-              {t('landing.fact2')}
-            </li>
-            <li>
-              <IconShield />
-              {t('landing.fact3', { pct: pct(fee) })}
-            </li>
-          </ul>
         </div>
         <div className="hero-visual" aria-hidden>
           <Envelope
@@ -129,13 +125,29 @@ export function Landing() {
             }
           />
           <div className="float-chip">
-            <span className="row" style={{ gap: 6 }}>
-              <IconSpark width={16} height={16} />
-              <b>MEZO</b>
+            <span className="float-chip-icon">
+              <IconSpark />
             </span>
-            {t('bal.staked')}
+            <span>
+              <b>{t('payout.stake')}</b>
+              <span className="float-chip-sub">{t('landing.chipSub')}</span>
+            </span>
           </div>
         </div>
+        <ul className="hero-facts">
+          <li>
+            <IconShield />
+            {t('landing.fact1')}
+          </li>
+          <li>
+            <IconShield />
+            {t('landing.fact2')}
+          </li>
+          <li>
+            <IconShield />
+            {t('landing.fact3', { pct: pct(fee) })}
+          </li>
+        </ul>
       </section>
 
       <section aria-labelledby="stats-title">
@@ -147,42 +159,44 @@ export function Landing() {
         </div>
         <div className="stats">
           <div className="stat">
-            <div className="stat-value">{count(s.packets)}</div>
+            <div className="stat-value">{num(count(s.packets))}</div>
             <div className="stat-label">{t('stats.packets')}</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{count(s.claims)}</div>
+            <div className="stat-value">{num(count(s.claims))}</div>
             <div className="stat-label">{t('stats.claims')}</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{count(s.recipients)}</div>
+            <div className="stat-value">{num(count(s.recipients))}</div>
             <div className="stat-label">{t('stats.recipients')}</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{fmtMusd(s.volume)}</div>
+            <div className="stat-value">{num(fmtMusd(s.volume))}</div>
             <div className="stat-label">{t('stats.volume')}</div>
           </div>
           <div className="stat stat-wide">
-            <div className="stat-value">{fmtMusd(s.open)}</div>
+            <div className="stat-value">{num(fmtMusd(s.open))}</div>
             <div className="stat-label">{t('stats.open')}</div>
           </div>
         </div>
         <div className="stats-meta">
           {source === 'live' ? (
-            <>
+            <span className="row" style={{ gap: 8 }}>
               <span className="live-dot" />
               {t('stats.live')}
               {payload.updatedAt ? <span>· {t('stats.asOf', { time: formatDateTime(payload.updatedAt, lang) })}</span> : null}
-            </>
-          ) : info.hongbao ? (
-            <>
-              {t('stats.snapshot')}
-              {payload.updatedAt ? <span>· {t('stats.asOf', { time: formatDateTime(payload.updatedAt, lang) })}</span> : null}
-            </>
-          ) : (
+            </span>
+          ) : !info.hongbao ? (
             <span>{t('stats.notLive')}</span>
+          ) : blank ? (
+            <span>{source === 'failed' ? t('stats.unavailable') : t('common.loading')}</span>
+          ) : (
+            <span>
+              {t('stats.snapshot')}
+              {payload.updatedAt ? ` · ${t('stats.asOf', { time: formatDateTime(payload.updatedAt, lang) })}` : ''}
+            </span>
           )}
-          {info.testnet ? <span>· {t('chain.testnetNote')}</span> : null}
+          {info.testnet ? <span className="stats-net">{t('chain.testnetNote')}</span> : null}
         </div>
         {payload.recent.length ? (
           <div className="card mt-4">
@@ -192,9 +206,9 @@ export function Landing() {
             <ul className="activity">
               {payload.recent.slice(0, 6).map((e, i) => (
                 <li key={`${e.txHash ?? i}-${e.kind}-${i}`}>
-                  <span>
+                  <span className="activity-main">
                     {t(`stats.recent.${e.kind}` as MessageKey, { id: e.id.toString() })}
-                    {e.address ? <span className="faint mono tiny"> · {shortAddress(e.address)}</span> : null}
+                    {e.address ? <span className="activity-addr">{shortAddress(e.address)}</span> : null}
                   </span>
                   <span className="mono">{e.amount > 0n ? `${fmtMusd(e.amount)} MUSD` : ''}</span>
                 </li>

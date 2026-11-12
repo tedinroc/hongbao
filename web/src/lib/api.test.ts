@@ -3,6 +3,7 @@ import { BaseError, ContractFunctionRevertedError, encodeErrorResult } from 'vie
 import { hongbaoWithErrorsAbi } from '../abi/extra';
 import {
   apiErrorFrom,
+  getConfig,
   getStatsApi,
   normalizePacket,
   normalizeStatsPayload,
@@ -53,6 +54,9 @@ describe('error codes', () => {
       BadRequest: 'BadRequest',
       SimulationReverted: 'Unknown',
       UnknownPacket: 'UnknownPacket',
+      TipTooLow: 'TipTooLow',
+      WrongRelayer: 'WrongRelayer',
+      BadRecipient: 'BadRecipient',
     };
     for (const [code, want] of Object.entries(cases)) {
       expect(apiErrorFrom(400, { error: code, message: 'x' }).code, code).toBe(want);
@@ -233,6 +237,7 @@ describe('fetch wrappers', () => {
       recipient: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
       payout: 0,
       keySig: '0x1234',
+      relayer: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
       device: 'abcd',
     });
     expect(res.txHash).toBe(hash);
@@ -245,6 +250,7 @@ describe('fetch wrappers', () => {
       recipient: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
       payout: 0,
       keySig: '0x1234',
+      relayer: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
       device: 'abcd',
     });
     expect(Object.keys(body)).not.toContain('key');
@@ -253,8 +259,44 @@ describe('fetch wrappers', () => {
   it('postClaim turns an error body into a coded error', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'AlreadyClaimed', message: 'claimed' }), { status: 409 })));
     await expect(
-      postClaim({ chainId: 31611, packetId: 1n, recipient: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', payout: 0, keySig: '0x', device: 'x' }),
+      postClaim({
+        chainId: 31611,
+        packetId: 1n,
+        recipient: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+        payout: 0,
+        keySig: '0x',
+        relayer: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+        device: 'x',
+      }),
     ).rejects.toMatchObject({ code: 'AlreadyClaimed' });
+  });
+
+  it('postClaim → WrongRelayer drops the cached /api/config so a retry signs for the new relayer', async () => {
+    const oldRelayer = '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC';
+    const newRelayer = '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65';
+    let relayer = oldRelayer;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/api/config') {
+        return new Response(JSON.stringify({ chains: { '31611': { hongbao: null, relayer, attester: null, enabled: true } } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ error: 'WrongRelayer', message: 'x', relayer: newRelayer }), { status: 409 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    expect((await getConfig()).chains['31611']?.relayer).toBe(oldRelayer);
+    relayer = newRelayer;
+    expect((await getConfig()).chains['31611']?.relayer).toBe(oldRelayer); // cached
+    await expect(
+      postClaim({
+        chainId: 31611,
+        packetId: 1n,
+        recipient: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+        payout: 0,
+        keySig: '0x',
+        relayer: oldRelayer,
+        device: 'x',
+      }),
+    ).rejects.toMatchObject({ code: 'WrongRelayer' });
+    expect((await getConfig()).chains['31611']?.relayer).toBe(newRelayer);
   });
 
   it('getStatsApi treats an HTML answer (no API deployed) as unavailable', async () => {

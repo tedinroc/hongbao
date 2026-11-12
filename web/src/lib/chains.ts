@@ -42,6 +42,11 @@ export interface MezoAddresses {
   router: Address;
   poolFactory: Address;
   priceFeed: Address;
+  /** MUSD loans (troves), SPEC.md "Phase 2: Fund from my Mezo loan". */
+  borrowerOperations: Address;
+  troveManager: Address;
+  hintHelpers: Address;
+  sortedTroves: Address;
 }
 
 const MEZO_TOKEN = '0x7B7c000000000000000000000000000000000001' as const;
@@ -57,6 +62,10 @@ const ADDRESSES: Record<ChainId, MezoAddresses> = {
     router: '0x9a1ff7FE3a0F69959A3fBa1F1e5ee18e1A9CD7E9',
     poolFactory: '0x4947243CC818b627A5D06d14C4eCe7398A23Ce1A',
     priceFeed: '0x86bCF0841622a5dAC14A313a15f96A95421b9366',
+    borrowerOperations: '0xCdF7028ceAB81fA0C6971208e83fa7872994beE5',
+    troveManager: '0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0',
+    hintHelpers: '0x4e4cBA3779d56386ED43631b4dCD6d8EacEcBCF6',
+    sortedTroves: '0x722E4D24FD6Ff8b0AC679450F3D91294607268fA',
   },
   [MAINNET_ID]: {
     musd: '0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186',
@@ -67,6 +76,10 @@ const ADDRESSES: Record<ChainId, MezoAddresses> = {
     router: '0x16A76d3cd3C1e3CE843C6680d6B37E9116b5C706',
     poolFactory: '0x83FE469C636C4081b87bA5b3Ae9991c6Ed104248',
     priceFeed: '0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88',
+    borrowerOperations: '0x44b1bac67dDA612a41a58AAf779143B181dEe031',
+    troveManager: '0x94AfB503dBca74aC3E4929BACEeDfCe19B93c193',
+    hintHelpers: '0xD267b3bE2514375A075fd03C3D9CBa6b95317DC3',
+    sortedTroves: '0x8C5DB4C62BF29c1C4564390d10c20a47E0b2749f',
   },
 };
 

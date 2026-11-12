@@ -37,6 +37,19 @@ There is no owner, no upgrade path and no admin withdrawal.
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
-| _filled after review_ | | | |
+| AUTH-M3 / FUNDS-1 | Medium | One sender could fill the global cap for ~1% and block new packets for up to 30 days; the guardian had no room to respond | Fixed: per-sender cap, soft caps below wider hard caps, 7-day max expiry |
+| AUTH-M2 / FUNDS-6 | Medium (relayer) | Zero-tip packets could drain the relayer's gas | Fixed in the relayer: TipTooLow check, every packet rate-limited |
+| AUTH-L1 / FUNDS-5 | Low | A copied claim transaction could take the relay tip | Fixed: `relayer` is part of the signed Claim; `WrongRelayer` otherwise |
+| AUTH-L2 | Low | An attestation did not bind the payout, so another link holder could switch a victim from Stake to Cash | Fixed: Attest now includes payout |
+| AUTH-L3 / FUNDS-3 | Low | A share sent to the Hongbao, sMUSD, gauge, MUSD or BTC contract would be stranded or swept | Fixed: `BadRecipient` |
+| AUTH-L4 / FUNDS-4 | Low | Guardian and treasury defaulted to the relayer hot key; single-step guardian handover | Fixed: two-step handover; mainnet deploy uses separate guardian/treasury addresses |
+| MEZO-1 | Low | `fetchPrice` was called as `view`; a Liquity-style PriceFeed upgrade would break BTC funding | Fixed: non-view call with a clear `OracleUnavailable` error |
+| AUTH-I2 | Info | A recipient contract returning huge data made the relayer pay extra gas | Fixed: BTC send does not copy return data |
+| AUTH-I5 | Info | Malformed signatures reverted with library errors | Fixed: `BadSignature` |
+| FUNDS-10 | Info | Gas kits were not bounded by the MUSD caps | Reduced: max drip 0.00002 BTC, max tip 0.000005 BTC per share |
+| AUTH-M1 | Info (by design) | Whoever holds an open-mode link can claim every share from many addresses | Documented; one-per-person mode is the app default |
+| FUNDS-7 / MEZO-4 | Info | Savings yield on unclaimed money goes to the treasury; staked shares earn MEZO instead of savings interest | Documented in the app and README |
 
-No external audit yet. Mainnet runs as a capped beta (50 MUSD per packet, 500 MUSD outstanding) until one is done.
+Every Mezo call was also simulated read-only against live testnet and mainnet state, and every path has since run with real transactions on Mezo testnet (see [PROOF.md](PROOF.md)), including BTC funding through Mezo's BTC precompile, which a local fork cannot emulate.
+
+No external audit yet. Mainnet runs as a capped beta (50 MUSD per packet, 100 MUSD open per sender, 500 MUSD open in total; guardian can raise them only up to 100 / 500 / 5,000) until one is done.

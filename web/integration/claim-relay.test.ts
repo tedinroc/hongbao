@@ -2,10 +2,15 @@
  * Front end <-> relayer integration on an anvil fork of Mezo testnet.
  *
  * The web app's own client code (getConfig, createPacket, signClaimWithLinkKey,
- * deviceId, postClaim, getPacketApi, getStatsApi and its error mapping) talks to
- * the real Pages Functions handlers, which talk to the fork. Nothing here
- * re-implements either side: if a field name, an error code, a chainId type or
- * the EIP-712 domain drifts between src/ and functions/, a test fails.
+ * deviceId, postClaim, getPacketApi, getStatsApi, readSendContext/capProblem and
+ * its error mapping) talks to the real Pages Functions handlers, which talk to the
+ * fork. Nothing here re-implements either side: if a field name, an error code, a
+ * chainId type or the EIP-712 domain drifts between src/ and functions/, a test fails.
+ *
+ * Contract v2: the link key signs Claim(packetId, recipient, payout, relayer) with
+ * relayer = /api/config's relayer, the attester signs Attest(..., payout, deadline),
+ * and the relayer enforces TipTooLow, BadRecipient and per-packet limits on every
+ * packet (1 per device, 5 per IP, 20 per IP per hour).
  *
  * Skipped unless VITE_FORK_RPC and VITE_FORK_HONGBAO are set:
  *
@@ -35,6 +40,7 @@ import {
   type Hex,
 } from 'viem';
 import { generatePrivateKey, mnemonicToAccount, privateKeyToAccount } from 'viem/accounts';
+import type { CreateParams } from '../src/lib/actions';
 
 // Front end
 import { hongbaoAbi } from '../src/abi/hongbao';
@@ -187,12 +193,25 @@ async function errOf(p: Promise<unknown>): Promise<{ code: ErrorCode; status?: n
   throw new Error('expected the call to fail');
 }
 
-/** What the Claim page does after the tap: sign with the link key, POST, wait, read the event. */
-async function claimLikeThePage(linkKey: Hex, id: bigint, phone: Phone, payout: fe712.PayoutValue) {
+/**
+ * What the Claim page does after the tap: read the relayer from /api/config, sign with
+ * the link key bound to it, POST, wait, read the event. `signFor` overrides the relayer
+ * the link key signs for (and the body names) to test refusals.
+ */
+async function claimLikeThePage(
+  linkKey: Hex,
+  id: bigint,
+  phone: Phone,
+  payout: fe712.PayoutValue,
+  o: { signFor?: Address; recipient?: Address } = {},
+) {
   currentIp = phone.ip;
   const { publicClient } = await import('../src/lib/chains');
-  const keySig = await fe712.signClaimWithLinkKey(linkKey, CHAIN, HB!, id, phone.address, payout);
-  const req: ClaimRequest = { chainId: CHAIN, packetId: id, recipient: phone.address, payout, keySig, device: phone.device };
+  const cfg = await getConfig();
+  const relayer = o.signFor ?? cfg.chains[String(CHAIN)]!.relayer!;
+  const recipient = o.recipient ?? phone.address;
+  const keySig = await fe712.signClaimWithLinkKey(linkKey, CHAIN, HB!, id, recipient, payout, relayer);
+  const req: ClaimRequest = { chainId: CHAIN, packetId: id, recipient, payout, keySig, relayer, device: phone.device };
   const { txHash } = await postClaim(req);
   const receipt = await publicClient(CHAIN).waitForTransactionReceipt({ hash: txHash, pollingInterval: 250 });
   expect(receipt.status).toBe('success');
@@ -201,6 +220,21 @@ async function claimLikeThePage(linkKey: Hex, id: bigint, phone: Phone, payout: 
   );
   expect(ev).toBeTruthy();
   return { txHash, receipt, amount: ev!.args.amount, paid: Number(ev!.args.payout), relayer: ev!.args.relayer };
+}
+
+/** A packet from the test sender through the app's own createPacket (permit path). */
+async function makePacket(sender: Address, amount: bigint, p: Partial<CreateParams> & { claimKey: Address }) {
+  const { createPacket } = await import('../src/lib/actions');
+  const { burnerHandle } = await import('../src/lib/wallet');
+  return createPacket(burnerHandle(sender), CHAIN, { kind: 'musd', amount }, {
+    shares: 1,
+    expiry: BigInt(Math.floor(Date.now() / 1000) + 3_600),
+    attester: ZERO,
+    dripPerShare: DRIP,
+    tipPerShare: TIP,
+    message: 'integration',
+    ...p,
+  });
 }
 
 /* ------------------------------------------------------------------ suite */
@@ -217,10 +251,11 @@ describe.skipIf(!FORK || !HB)(`front end ↔ relayer (${API_BASE ? 'HTTP via wra
 
   beforeAll(async () => {
     globalThis.fetch = routedFetch as typeof fetch;
-    await anvil().setBalance({ address: sender, value: E18 / 100n });
+    await anvil().setBalance({ address: sender, value: E18 / 10n });
     // MUSD is OpenZeppelin ERC20: _balances is storage slot 0.
+    // Enough to reach the testnet per-sender cap (2,000 MUSD open) in the caps test.
     const slot = keccak256(encodeAbiParameters([{ type: 'address' }, { type: 'uint256' }], [sender, 0n]));
-    await anvil().setStorageAt({ address: MUSD, index: slot, value: `0x${(50n * E18).toString(16).padStart(64, '0')}` as Hex });
+    await anvil().setStorageAt({ address: MUSD, index: slot, value: `0x${(2_100n * E18).toString(16).padStart(64, '0')}` as Hex });
     const { BURNER_KEY } = await import('../src/lib/wallet');
     store.set(BURNER_KEY, JSON.stringify({ v: 1, privateKey: senderKey, createdAt: Date.now() }));
   }, 120_000);
@@ -243,22 +278,53 @@ describe.skipIf(!FORK || !HB)(`front end ↔ relayer (${API_BASE ? 'HTTP via wra
     const { publicClient } = await import('../src/lib/chains');
     const pc = publicClient(CHAIN);
     const who = privateKeyToAccount(generatePrivateKey()).address;
-    for (const payout of [0, 1, 2] as const) {
-      const fe = fe712.claimDigest(CHAIN, HB!, 77n, who, payout);
-      const fn = hashTypedData({
-        domain: fn712.hongbaoDomain(CHAIN, HB!),
-        types: fn712.CLAIM_TYPES,
-        primaryType: 'Claim',
-        message: { packetId: 77n, recipient: who, payout },
-      });
-      const onChain = await pc.readContract({ address: HB!, abi: hongbaoAbi, functionName: 'claimDigest', args: [77n, who, payout] });
-      expect(fe).toBe(fn);
-      expect(fe).toBe(onChain);
-    }
     const deadline = 1_900_000_000n;
-    const feAttest = hashTypedData(fe712.attestTypedData(CHAIN, HB!, 77n, who, deadline));
-    const onChainAttest = await pc.readContract({ address: HB!, abi: hongbaoAbi, functionName: 'attestDigest', args: [77n, who, deadline] });
-    expect(feAttest).toBe(onChainAttest);
+    for (const payout of [0, 1, 2] as const) {
+      for (const relayer of [RELAYER, fe712.ANY_RELAYER]) {
+        const fe = fe712.claimDigest(CHAIN, HB!, 77n, who, payout, relayer);
+        const fn = hashTypedData({
+          domain: fn712.hongbaoDomain(CHAIN, HB!),
+          types: fn712.CLAIM_TYPES,
+          primaryType: 'Claim',
+          message: { packetId: 77n, recipient: who, payout, relayer },
+        });
+        const onChain = await pc.readContract({
+          address: HB!,
+          abi: hongbaoAbi,
+          functionName: 'claimDigest',
+          args: [77n, who, payout, relayer],
+        });
+        expect(fe).toBe(fn);
+        expect(fe).toBe(onChain);
+      }
+      // The relayer's attestation (functions/_lib/relay.ts) binds the payout too.
+      const feAttest = fe712.attestDigest(CHAIN, HB!, 77n, who, payout, deadline);
+      const fnAttest = hashTypedData({
+        domain: fn712.hongbaoDomain(CHAIN, HB!),
+        types: fn712.ATTEST_TYPES,
+        primaryType: 'Attest',
+        message: { packetId: 77n, recipient: who, payout, deadline },
+      });
+      const onChainAttest = await pc.readContract({
+        address: HB!,
+        abi: hongbaoAbi,
+        functionName: 'attestDigest',
+        args: [77n, who, payout, deadline],
+      });
+      expect(feAttest).toBe(fnAttest);
+      expect(feAttest).toBe(onChainAttest);
+    }
+  });
+
+  it('the Send page reads the v2 caps and the sender’s open total from the contract', async () => {
+    const { readSendContext } = await import('../src/lib/chainData');
+    const ctx = await readSendContext(CHAIN, sender);
+    // contracts/script/Deploy.s.sol, Mezo testnet: 1,000 / 2,000 / 20,000 MUSD.
+    expect(ctx.maxPerPacket).toBe(1_000n * E18);
+    expect(ctx.maxPerSender).toBe(2_000n * E18);
+    expect(ctx.maxOutstanding).toBe(20_000n * E18);
+    expect(ctx.senderOutstanding).toBe(0n);
+    expect(ctx.feeBps).toBe(100n);
   });
 
   it('creates a one-per-person packet the way the Send page does (attester from /api/config)', async () => {
@@ -314,15 +380,31 @@ describe.skipIf(!FORK || !HB)(`front end ↔ relayer (${API_BASE ? 'HTTP via wra
     expect(e.status).toBe(429);
   });
 
-  it('a new device on the same IP → RateLimited (LIMIT_IP_PER_PACKET = 1)', async () => {
-    const e = await errOf(claimLikeThePage(linkKey, packetId, newPhone({ ip: phoneA.ip }), 0));
-    expect(e.code).toBe('RateLimited');
-  });
-
   it('a link with the wrong key → BadSignature', async () => {
     const e = await errOf(claimLikeThePage(generatePrivateKey(), packetId, newPhone(), 0));
     expect(e.code).toBe('BadSignature');
     expect(e.status).toBe(400);
+  });
+
+  it('a claim signed for another relayer → WrongRelayer, before anything is signed or sent', async () => {
+    const other = privateKeyToAccount(generatePrivateKey()).address;
+    const e = await errOf(claimLikeThePage(linkKey, packetId, newPhone(), 0, { signFor: other }));
+    expect(e.code).toBe('WrongRelayer');
+    expect(e.status).toBe(409);
+    const e2 = await errOf(claimLikeThePage(linkKey, packetId, newPhone(), 0, { signFor: fe712.ANY_RELAYER }));
+    expect(e2.code).toBe('WrongRelayer');
+    // /api/config is read again after WrongRelayer, and still names our relayer.
+    expect((await getConfig()).chains['31611']?.relayer).toBe(RELAYER);
+  });
+
+  it('a protocol address as recipient → BadRecipient (the relayer refuses before simulating)', async () => {
+    const { chainInfo } = await import('../src/lib/chains');
+    const a = chainInfo(CHAIN).addresses;
+    for (const recipient of [a.gauge, a.smusd, a.musd, getAddress(HB!)]) {
+      const e = await errOf(claimLikeThePage(linkKey, packetId, newPhone(), 0, { recipient }));
+      expect(e.code, recipient).toBe('BadRecipient');
+      expect(e.status).toBe(400);
+    }
   });
 
   it('an unknown packet → UnknownPacket (claim and packet read)', async () => {
@@ -335,7 +417,15 @@ describe.skipIf(!FORK || !HB)(`front end ↔ relayer (${API_BASE ? 'HTTP via wra
   it('mainnet (not enabled yet) → ChainDisabled', async () => {
     currentIp = '198.51.100.250';
     const e = await errOf(
-      postClaim({ chainId: 31612, packetId: 1n, recipient: newPhone().address, payout: 0, keySig: `0x${'11'.repeat(65)}`, device: deviceId() }),
+      postClaim({
+        chainId: 31612,
+        packetId: 1n,
+        recipient: newPhone().address,
+        payout: 0,
+        keySig: `0x${'11'.repeat(65)}`,
+        relayer: RELAYER,
+        device: deviceId(),
+      }),
     );
     expect(e.code).toBe('ChainDisabled');
   });
@@ -393,24 +483,84 @@ describe.skipIf(!FORK || !HB)(`front end ↔ relayer (${API_BASE ? 'HTTP via wra
     expect(cfgText).not.toContain(attesterKey.slice(2).toLowerCase());
   });
 
-  it('a packet without an attester (one-per-person off) is relayed too', async () => {
+  it('a packet without an attester (one-per-person off) is relayed, with the same per-device limit', async () => {
     const key = generatePrivateKey();
-    const { createPacket } = await import('../src/lib/actions');
-    const { burnerHandle } = await import('../src/lib/wallet');
-    const created = await createPacket(burnerHandle(sender), CHAIN, { kind: 'musd', amount: E18 }, {
-      shares: 2,
-      expiry: BigInt(Math.floor(Date.now() / 1000) + 3_600),
-      claimKey: fe712.linkKeyAddress(key),
-      attester: ZERO,
-      dripPerShare: DRIP,
-      tipPerShare: TIP,
-      message: 'open packet',
-    });
-    // Same device and IP twice is fine here: limits apply to one-per-person packets only.
+    const created = await makePacket(sender, E18, { shares: 2, claimKey: fe712.linkKeyAddress(key), message: 'open packet' });
     const phone = newPhone();
     const r = await claimLikeThePage(key, created.id, phone, fe712.Payout.Save);
     expect(r.paid).toBe(fe712.Payout.Save);
-    const r2 = await claimLikeThePage(key, created.id, { ...newPhone(), device: phone.device, ip: phone.ip }, fe712.Payout.Cash);
+    // v2: every packet is limited to one claim per device.
+    const e = await errOf(claimLikeThePage(key, created.id, { ...newPhone(), device: phone.device }, fe712.Payout.Cash));
+    expect(e.code).toBe('RateLimited');
+    // Another phone on the same network is fine (5 per IP per packet).
+    const r2 = await claimLikeThePage(key, created.id, { ...newPhone(), ip: phone.ip }, fe712.Payout.Cash);
     expect(r2.paid).toBe(fe712.Payout.Cash);
+  });
+
+  it('one network can open at most 5 shares of a packet (LIMIT_IP_PER_PACKET default 5)', async () => {
+    const key = generatePrivateKey();
+    const created = await makePacket(sender, (6n * E18) / 10n, { shares: 6, claimKey: fe712.linkKeyAddress(key), message: 'office wifi' });
+    const ip = '198.51.100.240';
+    for (let i = 0; i < 5; i++) {
+      const r = await claimLikeThePage(key, created.id, newPhone({ ip }), fe712.Payout.Save);
+      expect(r.paid).toBe(fe712.Payout.Save);
+    }
+    const e = await errOf(claimLikeThePage(key, created.id, newPhone({ ip }), fe712.Payout.Save));
+    expect(e.code).toBe('RateLimited');
+    expect(e.status).toBe(429);
+    const last = await claimLikeThePage(key, created.id, newPhone(), fe712.Payout.Save);
+    expect(last.paid).toBe(fe712.Payout.Save);
+  });
+
+  it('a packet whose tip cannot pay for the claim → TipTooLow (nothing sent)', async () => {
+    const key = generatePrivateKey();
+    const created = await makePacket(sender, E18 / 10n, {
+      shares: 1,
+      claimKey: fe712.linkKeyAddress(key),
+      dripPerShare: 0n,
+      tipPerShare: 1n, // 1 wei: far below estimated gas × gas price × 1.2
+      message: 'no tip',
+    });
+    const { readPacketChain } = await import('../src/lib/chainData');
+    const e = await errOf(claimLikeThePage(key, created.id, newPhone(), fe712.Payout.Save));
+    expect(e.code).toBe('TipTooLow');
+    expect(e.status).toBe(422);
+    expect((await readPacketChain(CHAIN, created.id))?.sharesLeft).toBe(1);
+    const { refundPacket } = await import('../src/lib/actions');
+    const { burnerHandle } = await import('../src/lib/wallet');
+    await refundPacket(burnerHandle(sender), CHAIN, created.id);
+  });
+
+  it('caps: capProblem predicts the contract’s OverSenderCap before the wallet is asked to sign', async () => {
+    const { readSendContext, capProblem } = await import('../src/lib/chainData');
+    const { refundPacket } = await import('../src/lib/actions');
+    const { burnerHandle } = await import('../src/lib/wallet');
+    const before = await readSendContext(CHAIN, sender);
+    // A packet over the per-packet cap is caught locally.
+    expect(capProblem(before, before.maxPerPacket + 1n)?.kind).toBe('packet');
+    // Fill the sender's open total close to the per-sender cap with two maximal packets.
+    const big = [] as bigint[];
+    for (let i = 0; i < 2; i++) {
+      const c = await makePacket(sender, 1_000n * E18, { claimKey: fe712.linkKeyAddress(generatePrivateKey()), message: 'big' });
+      big.push(c.id);
+    }
+    const ctx = await readSendContext(CHAIN, sender);
+    expect(ctx.senderOutstanding).toBe(before.senderOutstanding + 2n * 990n * E18);
+    const net = (30n * E18 * 99n) / 100n;
+    const problem = capProblem(ctx, net);
+    expect(problem?.kind).toBe('sender');
+    if (problem?.kind === 'sender') expect(problem.room).toBe(ctx.maxPerSender - ctx.senderOutstanding);
+    // The contract agrees (createPacket's simulation reverts before anything is sent).
+    const err = await makePacket(sender, 30n * E18, { claimKey: fe712.linkKeyAddress(generatePrivateKey()), message: 'too much' }).then(
+      () => null,
+      (x: unknown) => x,
+    );
+    expect(errorCode(err)).toBe('OverSenderCap');
+    // A packet that fits the room left is accepted.
+    if (problem?.kind === 'sender' && problem.room >= E18) {
+      expect(capProblem(ctx, E18 / 2n)).toBeNull();
+    }
+    for (const id of big) await refundPacket(burnerHandle(sender), CHAIN, id);
+    expect((await readSendContext(CHAIN, sender)).senderOutstanding).toBe(ctx.senderOutstanding - 2n * 990n * E18);
   });
 });

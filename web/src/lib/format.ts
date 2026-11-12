@@ -71,6 +71,41 @@ export function utf8Bytes(s: string): number {
   return new TextEncoder().encode(s).length;
 }
 
+/** Hongbao.MAX_MESSAGE_BYTES */
+export const MESSAGE_MAX_BYTES = 200;
+
+/**
+ * Bidirectional-text controls (LRM, RLM, ALM and the embedding, override and isolate marks).
+ * In a sender's message they can make text read in a different order than it is stored.
+ */
+const BIDI_CONTROLS = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
+/** C0 / C1 control characters other than tab and newline. */
+const OTHER_CONTROLS = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/g;
+
+/** Remove bidi and other control characters (tab and newline stay). */
+export function stripControls(raw: string): string {
+  return raw.replace(BIDI_CONTROLS, '').replace(OTHER_CONTROLS, '');
+}
+
+/**
+ * A sender's message made safe to show as plain text: bidi and other control characters
+ * removed, and cut to at most 200 UTF-8 bytes without splitting a character. Render the
+ * result as a text node only.
+ */
+export function cleanMessage(raw: string): string {
+  const s = stripControls(raw);
+  if (utf8Bytes(s) <= MESSAGE_MAX_BYTES) return s;
+  let out = '';
+  let bytes = 0;
+  for (const ch of s) {
+    const n = utf8Bytes(ch);
+    if (bytes + n > MESSAGE_MAX_BYTES) break;
+    out += ch;
+    bytes += n;
+  }
+  return out;
+}
+
 /** Duration in seconds -> "2d 3h", "5h 12m", "8m". */
 export function formatDuration(seconds: number, t: TFunction): string {
   const s = Math.max(0, Math.floor(seconds));

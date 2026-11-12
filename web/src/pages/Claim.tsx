@@ -9,12 +9,12 @@ import { MezoCounter, WalletActions, useBalances } from '../components/WalletAct
 import { WalletPicker } from '../components/WalletPanel';
 import { AddressLink, ErrorNotice, Loading, Notice, Steps, TxLink } from '../components/ui';
 import { refundPacket } from '../lib/actions';
-import { deviceId, postClaim, type PacketView } from '../lib/api';
+import { deviceId, getConfig, postClaim, type PacketView } from '../lib/api';
 import { chainInfo, parseChainId, publicClient, type ChainId } from '../lib/chains';
 import { findPacketCreated, isClaimed, packetClaims, readPacket, type ClaimedEvent, type CreatedEvent } from '../lib/chainData';
-import { Payout, linkKeyAddress, linkKeyFromHash, signClaimWithLinkKey, type PayoutValue } from '../lib/eip712';
+import { Payout, checkLink, parseLinkFragment, signClaimWithLinkKey, type LinkFragment, type PayoutValue } from '../lib/eip712';
 import { HongbaoError } from '../lib/errors';
-import { fmtBtc, fmtMusd, formatDuration, shortAddress } from '../lib/format';
+import { cleanMessage, fmtBtc, fmtMusd, formatDuration, shortAddress } from '../lib/format';
 import { useAsync, useInterval, useNow } from '../lib/hooks';
 import { useWallet } from '../lib/walletContext';
 
@@ -54,19 +54,59 @@ export function Claim() {
       </div>
     );
   }
-  return <ClaimInner chainId={chainId} id={id} hash={hash} />;
+  // The key lives only in the URL fragment, which browsers never send to a server.
+  const frag = parseLinkFragment(hash);
+  // A link made for another Hongbao contract never shows this site's packet with the same id.
+  if (checkLink(frag, info.hongbao) === 'otherDeployment') {
+    return <LinkProblem chainId={chainId} id={id} frag={frag} kind="otherDeployment" />;
+  }
+  return <ClaimInner chainId={chainId} id={id} frag={frag} />;
 }
 
-function ClaimInner({ chainId, id, hash }: { chainId: ChainId; id: bigint; hash: string }) {
+/** A link this site can't open: another deployment's, or a key for a different packet. */
+function LinkProblem({
+  chainId,
+  id,
+  frag,
+  kind,
+}: {
+  chainId: ChainId;
+  id: bigint;
+  frag: LinkFragment;
+  kind: 'otherDeployment' | 'keyMismatch';
+}) {
+  const { t } = useI18n();
+  const info = chainInfo(chainId);
+  const title: MessageKey = kind === 'otherDeployment' ? 'claim.otherDeployment.title' : 'claim.badKey.title';
+  const body =
+    kind === 'otherDeployment'
+      ? t('claim.otherDeployment.body', {
+          theirs: frag.contract ? shortAddress(frag.contract) : '?',
+          ours: shortAddress(info.hongbao ?? ''),
+          chain: t(info.nameKey),
+        })
+      : t('claim.badKey.body', { id: id.toString() });
+  return (
+    <div className="stack-lg">
+      <Envelope state="closed" label={t('claim.title')} />
+      <div className="card stack">
+        <h1 className="section-title">{t(title)}</h1>
+        <p className="muted">{body}</p>
+      </div>
+      <Link className="btn btn-ghost btn-block" to="/">
+        {t('nav.home')}
+      </Link>
+    </div>
+  );
+}
+
+function ClaimInner({ chainId, id, frag }: { chainId: ChainId; id: bigint; frag: LinkFragment }) {
   const { t } = useI18n();
   const info = chainInfo(chainId);
   const hongbao = info.hongbao!;
   const { active, selectBurner } = useWallet();
   const now = useNow(15_000);
-
-  // The key lives only in the URL fragment, which browsers never send to a server.
-  const linkKey = useMemo(() => linkKeyFromHash(hash), [hash]);
-  const keyAddress = useMemo(() => (linkKey ? linkKeyAddress(linkKey) : null), [linkKey]);
+  const linkKey = frag.key;
 
   const packet = useAsync(() => readPacket(chainId, id), [chainId, id]);
   const created = useAsync<CreatedEvent | null>(() => findPacketCreated(chainId, id).catch(() => null), [chainId, id]);
@@ -86,10 +126,22 @@ function ClaimInner({ chainId, id, hash }: { chainId: ChainId; id: bigint; hash:
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const p: PacketView | null | undefined = packet.data;
-  const message = created.data?.message ?? p?.message ?? null;
+  // Sender messages are untrusted: shown as plain text, bidi controls stripped, 200 bytes at most.
+  const rawMessage = created.data?.message ?? p?.message ?? null;
+  const message = useMemo(() => (rawMessage ? cleanMessage(rawMessage) || null : null), [rawMessage]);
   const expired = p ? BigInt(now) >= p.expiry : false;
   const closed = p ? p.refunded || p.sharesLeft === 0 || expired : false;
-  const keyMismatch = Boolean(p && keyAddress && keyAddress.toLowerCase() !== p.claimKey.toLowerCase());
+  // With a key, check it opens this packet before showing the packet. A link without a key
+  // (from the ledger or "My wallet") still shows the public packet, with a note on how to claim.
+  const linkState = p ? checkLink(frag, hongbao, p.claimKey) : 'ok';
+
+  // While an unopened packet waits, hide the app's bottom tabs on phones so the one button owns the screen.
+  const focus = Boolean(p && linkKey && !closed && !result && !(already.data && recipientAddr) && linkState === 'ok');
+  useEffect(() => {
+    if (!focus) return;
+    document.documentElement.classList.add('claim-focus');
+    return () => document.documentElement.classList.remove('claim-focus');
+  }, [focus]);
 
   const onOpen = async () => {
     if (!linkKey || !p) return;
@@ -98,10 +150,14 @@ function ClaimInner({ chainId, id, hash }: { chainId: ChainId; id: bigint; hash:
       setPhase('sign');
       const wallet = active ?? selectBurner();
       const recipient = wallet.address;
-      if (await isClaimed(chainId, id, recipient)) throw new HongbaoError('AlreadyClaimed');
-      const keySig = await signClaimWithLinkKey(linkKey, chainId, hongbao, id, recipient, payout);
+      const [claimedAlready, cfg] = await Promise.all([isClaimed(chainId, id, recipient), getConfig()]);
+      if (claimedAlready) throw new HongbaoError('AlreadyClaimed');
+      // Bind the signature to our relayer so a copied transaction cannot take the relay tip.
+      const relayer = cfg.chains[String(chainId)]?.relayer;
+      if (!relayer) throw new HongbaoError('RelayerUnavailable');
+      const keySig = await signClaimWithLinkKey(linkKey, chainId, hongbao, id, recipient, payout, relayer);
       setPhase('relay');
-      const { txHash } = await postClaim({ chainId, packetId: id, recipient, payout, keySig, device: deviceId() });
+      const { txHash } = await postClaim({ chainId, packetId: id, recipient, payout, keySig, relayer, device: deviceId() });
       setPhase('confirm');
       const receipt = await publicClient(chainId).waitForTransactionReceipt({
         hash: txHash,
@@ -160,6 +216,10 @@ function ClaimInner({ chainId, id, hash }: { chainId: ChainId; id: bigint; hash:
     );
   }
 
+  if (linkState === 'keyMismatch' || linkState === 'otherDeployment') {
+    return <LinkProblem chainId={chainId} id={id} frag={frag} kind={linkState} />;
+  }
+
   if (result) {
     return <ClaimSuccess chainId={chainId} result={result} packet={p} message={message} />;
   }
@@ -196,10 +256,9 @@ function ClaimInner({ chainId, id, hash }: { chainId: ChainId; id: bigint; hash:
   ];
 
   return (
-    <div className="stack-lg">
-      {envelope}
-
-      <div className="claim-head">
+    <div className="stack-lg claim-page">
+      <div className="stack">
+        {envelope}
         <div className="claim-meta">
           <span className="chip chip-red">{t('claim.each', { amount: fmtMusd(p.nextShare) })}</span>
           <span className="chip">{t('claim.expiresIn', { time: formatDuration(timeLeft, t) })}</span>
@@ -212,14 +271,9 @@ function ClaimInner({ chainId, id, hash }: { chainId: ChainId; id: bigint; hash:
           <h2 className="section-title">{t('claim.noKey.title')}</h2>
           <p className="muted">{t('claim.noKey.body')}</p>
         </div>
-      ) : keyMismatch ? (
-        <div className="card stack">
-          <h2 className="section-title">{t('claim.badKey.title')}</h2>
-          <p className="muted">{t('claim.badKey.body')}</p>
-        </div>
       ) : (
         <>
-          <section className="stack">
+          <section className="stack-sm">
             <h2 className="section-title">{t('claim.choose')}</h2>
             <div className="stack-sm" role="radiogroup" aria-label={t('claim.choose')}>
               {PAYOUTS.map((o) => (
@@ -247,34 +301,29 @@ function ClaimInner({ chainId, id, hash }: { chainId: ChainId; id: bigint; hash:
             </div>
           </section>
 
-          <section className="card stack-sm">
-            <span className="label">{t('claim.to')}</span>
-            <div className="wallet-card">
-              <div className="wallet-avatar">{active?.kind === 'injected' ? <IconWallet /> : <IconPhone />}</div>
-              <div className="wallet-meta">
-                <div className="wallet-name">
-                  {active
-                    ? active.kind === 'burner'
-                      ? t('wallet.thisPhone')
-                      : active.name
-                    : t('wallet.newOnPhone')}
-                </div>
-                {active ? <div className="wallet-addr">{shortAddress(active.address)}</div> : null}
+          <section className="claim-to">
+            <div className="wallet-avatar">{active?.kind === 'injected' ? <IconWallet /> : <IconPhone />}</div>
+            <div className="wallet-meta">
+              <div className="label">{t('claim.to')}</div>
+              <div className="wallet-name">
+                {active ? (active.kind === 'burner' ? t('wallet.thisPhone') : active.name) : t('wallet.newOnPhone')}
+                {active ? <span className="wallet-addr"> · {shortAddress(active.address)}</span> : null}
               </div>
-              <button type="button" className="btn btn-quiet btn-sm" onClick={() => setPickerOpen(true)} disabled={busy}>
-                {t('wallet.useOwn')}
-              </button>
             </div>
+            <button type="button" className="btn btn-quiet btn-sm" onClick={() => setPickerOpen(true)} disabled={busy}>
+              {t('wallet.change')}
+            </button>
           </section>
 
-          <section className="stack">
+          {/* Stays pinned to the bottom of the screen on phones, so the one big button is always in reach. */}
+          <section className="claim-cta">
             {busy ? <Steps steps={steps} current={phase} done={false} /> : null}
             <ErrorNotice error={error} />
-            <button type="button" className="btn btn-gold btn-lg btn-block" onClick={onOpen} disabled={busy}>
+            <button type="button" className="btn btn-gold btn-xl btn-block" onClick={onOpen} disabled={busy}>
               {busy ? <span className="spinner" /> : null}
-              {t('claim.open')}
+              {busy ? t('claim.opening') : t('claim.open')}
             </button>
-            <p className="hint center">{t('claim.free')}</p>
+            {busy ? null : <p className="hint center">{t('claim.free')}</p>}
           </section>
         </>
       )}
@@ -282,6 +331,15 @@ function ClaimInner({ chainId, id, hash }: { chainId: ChainId; id: bigint; hash:
       <WalletPicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
     </div>
   );
+}
+
+/** The line that says how a share was paid, from the payout Hongbao actually used. */
+function payoutAs(paid: number): MessageKey {
+  return paid === Payout.Cash ? 'claim.done.as.2' : paid === Payout.Save ? 'claim.done.as.1' : 'claim.done.as.0';
+}
+
+function payoutName(paid: number): MessageKey {
+  return paid === Payout.Cash ? 'payout.cash' : paid === Payout.Save ? 'payout.save' : 'payout.stake';
 }
 
 function ClaimSuccess({
@@ -297,16 +355,17 @@ function ClaimSuccess({
 }) {
   const { t } = useI18n();
   const bal = useBalances(chainId, result.recipient);
-  const fellBack = result.requested === Payout.Stake && result.payout !== Payout.Stake;
+  // Hongbao pays Stake or Cash as Save when Mezo's gauge or vault refuses (Claimed.payout says which).
+  const fellBack = result.payout !== result.requested && result.requested !== Payout.Save;
   return (
     <div className="stack-lg">
       <Envelope
         state="open"
-        label={t('claim.done.title')}
+        label={`${t('claim.done.title')} · ${fmtMusd(result.amount)} MUSD`}
         message={message ?? t('claim.title')}
         letter={
           <>
-            <div className="env-letter-label">{t('claim.done.title')}</div>
+            <div className="env-letter-label">{t(payoutName(result.payout))}</div>
             <div className="env-letter-amount">{fmtMusd(result.amount)}</div>
             <div className="env-letter-unit">MUSD</div>
           </>
@@ -314,14 +373,15 @@ function ClaimSuccess({
       />
       <div className="center stack-sm reveal reveal-delay">
         <h1 className="page-title">{t('claim.done.title')}</h1>
-        <div className="big-amount">{fmtMusd(result.amount)} MUSD</div>
-        <p className="muted">{t(`claim.done.as.${result.payout === 2 ? 2 : result.payout === 1 ? 1 : 0}` as MessageKey)}</p>
+        <p className="muted">{t(payoutAs(result.payout))}</p>
         {packet.dripPerShare > 0n ? <p className="hint">{t('claim.drip', { btc: fmtBtc(packet.dripPerShare) })}</p> : null}
         <div className="row" style={{ justifyContent: 'center' }}>
           <TxLink chainId={chainId} hash={result.txHash} />
         </div>
       </div>
-      {fellBack ? <Notice kind="gold">{t('claim.fellBack')}</Notice> : null}
+      {fellBack ? (
+        <Notice kind="gold">{t(result.requested === Payout.Cash ? 'claim.fellBack.2' : 'claim.fellBack.0')}</Notice>
+      ) : null}
       {result.payout === Payout.Stake ? (
         <div className="card center stack-sm reveal reveal-delay">
           <span className="label">{t('claim.earned')}</span>
@@ -369,7 +429,7 @@ function AlreadyClaimed({
         message={message ?? t('claim.title')}
         letter={
           <>
-            <div className="env-letter-label">{t('claim.already')}</div>
+            <div className="env-letter-label">{mine.data ? t(payoutName(mine.data.payout)) : t('claim.title')}</div>
             <div className="env-letter-amount">{mine.data ? fmtMusd(mine.data.amount) : '·'}</div>
             <div className="env-letter-unit">MUSD</div>
           </>
@@ -377,6 +437,7 @@ function AlreadyClaimed({
       />
       <div className="center stack-sm">
         <h1 className="page-title">{t('claim.already')}</h1>
+        {mine.data ? <p className="muted">{t(payoutAs(mine.data.payout))}</p> : null}
         <p className="muted">{t('claim.left', { left: packet.sharesLeft, total: packet.sharesTotal })}</p>
         {mine.data ? (
           <div className="row" style={{ justifyContent: 'center' }}>
@@ -443,6 +504,9 @@ function FinalTally({
             : t('me.opened', { opened, total: packet.sharesTotal })}
         </p>
       </div>
+      {!packet.refunded && packet.remaining > 0n && refunded === null ? (
+        <Notice>{t(expired ? 'claim.restWaiting' : 'claim.restOpen', { amount: fmtMusd(packet.remaining) })}</Notice>
+      ) : null}
       {claims.loading ? <Loading /> : null}
       {claims.data && claims.data.length ? (
         <div className="card">

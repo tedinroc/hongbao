@@ -9,9 +9,10 @@
  *   VITE_FORK_RPC=http://127.0.0.1:8645 VITE_FORK_HONGBAO=<address> VITE_FORK_FROM_BLOCK=<block> npx vitest run src/e2e
  *
  * It exercises: permit create (actions.createPacket), packet reads, link-key claim
- * signing, a relayed claim that stakes in the real sMUSD gauge, live balances,
- * cash out (gauge withdraw + sMUSD withdraw), pass it on, refund, the ledger's
- * event and follow-up scans, and custom-error decoding.
+ * signing bound to a relayer (contract v2), a relayed claim that stakes in the real
+ * sMUSD gauge, live balances, cash out (gauge withdraw + sMUSD withdraw), pass it on,
+ * refund, the ledger's event and follow-up scans, and custom-error decoding
+ * (AlreadyClaimed, WrongRelayer, BadRecipient).
  */
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
@@ -137,19 +138,20 @@ describe.skipIf(!FORK || !HB)('fork E2E against Mezo testnet contracts', { timeo
     const { signClaimWithLinkKey, Payout } = await import('../lib/eip712');
     const { hongbaoAbi } = await import('../abi/hongbao');
     const { publicClient, mezoTestnet } = await import('../lib/chains');
-    const keySig = await signClaimWithLinkKey(linkKey, 31611, HB!, packetId, recipient, Payout.Stake);
+    const keySig = await signClaimWithLinkKey(linkKey, 31611, HB!, packetId, recipient, Payout.Stake, relayer.address);
     const wc = createWalletClient({ account: relayer, chain: mezoTestnet, transport: http(FORK) });
     const hash = await wc.writeContract({
       address: HB!,
       abi: hongbaoAbi,
       functionName: 'claim',
-      args: [packetId, recipient, Payout.Stake, keySig, 0n, '0x'],
+      args: [packetId, recipient, Payout.Stake, relayer.address, keySig, 0n, '0x'],
     });
     const receipt = await publicClient(31611).waitForTransactionReceipt({ hash });
     const ev = parseEventLogs({ abi: hongbaoAbi, logs: receipt.logs, eventName: 'Claimed' })[0];
     expect(ev.args.recipient).toBe(recipient);
     expect(ev.args.amount).toBe(share);
     expect(ev.args.payout).toBe(Payout.Stake);
+    expect(ev.args.relayer).toBe(relayer.address);
 
     const { readBalances } = await import('../lib/chainData');
     const b = await readBalances(31611, recipient);
@@ -162,17 +164,42 @@ describe.skipIf(!FORK || !HB)('fork E2E against Mezo testnet contracts', { timeo
     const { hongbaoWithErrorsAbi } = await import('../abi/extra');
     const { publicClient } = await import('../lib/chains');
     const { errorCode } = await import('../lib/errors');
-    const keySig = await signClaimWithLinkKey(linkKey, 31611, HB!, packetId, recipient, Payout.Save);
+    const keySig = await signClaimWithLinkKey(linkKey, 31611, HB!, packetId, recipient, Payout.Save, relayer.address);
     const err = await publicClient(31611)
       .simulateContract({
         address: HB!,
         abi: hongbaoWithErrorsAbi,
         functionName: 'claim',
-        args: [packetId, recipient, Payout.Save, keySig, 0n, '0x'],
+        args: [packetId, recipient, Payout.Save, relayer.address, keySig, 0n, '0x'],
         account: relayer.address,
       })
       .then(() => null, (e: unknown) => e);
     expect(errorCode(err)).toBe('AlreadyClaimed');
+  });
+
+  it('decodes WrongRelayer for a copied claim and BadRecipient for a protocol address', async () => {
+    const { signClaimWithLinkKey, Payout } = await import('../lib/eip712');
+    const { hongbaoWithErrorsAbi } = await import('../abi/extra');
+    const { publicClient, chainInfo } = await import('../lib/chains');
+    const { errorCode } = await import('../lib/errors');
+    const simulate = (to: Address, sig: Hex, from: Address) =>
+      publicClient(31611)
+        .simulateContract({
+          address: HB!,
+          abi: hongbaoWithErrorsAbi,
+          functionName: 'claim',
+          args: [packetId, to, Payout.Cash, relayer.address, sig, 0n, '0x'],
+          account: from,
+        })
+        .then(() => null, (e: unknown) => e);
+    // Someone copies a relayer-bound claim and submits it from their own address.
+    const other = privateKeyToAccount(generatePrivateKey()).address;
+    const sig = await signClaimWithLinkKey(linkKey, 31611, HB!, packetId, other, Payout.Cash, relayer.address);
+    expect(errorCode(await simulate(other, sig, sender))).toBe('WrongRelayer');
+    // The sMUSD gauge (a protocol address) can never be the recipient.
+    const gauge = chainInfo(31611).addresses.gauge;
+    const gaugeSig = await signClaimWithLinkKey(linkKey, 31611, HB!, packetId, gauge, Payout.Cash, relayer.address);
+    expect(errorCode(await simulate(gauge, gaugeSig, relayer.address))).toBe('BadRecipient');
   });
 
   it('cash out: gauge withdraw then sMUSD withdraw, from the phone wallet', async () => {
@@ -192,7 +219,7 @@ describe.skipIf(!FORK || !HB)('fork E2E against Mezo testnet contracts', { timeo
     expect(after.musd >= share).toBe(true);
   });
 
-  it('pass it on: the recipient makes a packet with no gas kits', async () => {
+  it('pass it on: the recipient makes a packet that carries only the relay tip', async () => {
     const { createPacket } = await import('../lib/actions');
     const w = await asBurner(recipientKey);
     const created = await createPacket(
@@ -205,7 +232,7 @@ describe.skipIf(!FORK || !HB)('fork E2E against Mezo testnet contracts', { timeo
         claimKey: privateKeyToAccount(generatePrivateKey()).address,
         attester: '0x0000000000000000000000000000000000000000',
         dripPerShare: 0n,
-        tipPerShare: 0n,
+        tipPerShare: 1_000_000_000_000n, // the relayer refuses packets whose tip does not cover gas (TipTooLow)
         message: 'pass it on',
       },
     );

@@ -125,9 +125,8 @@ export function WalletActions({
         >
           <span className="action-icon">{busy === 'mezo' ? <span className="spinner" /> : <IconSpark />}</span>
           <span className="action-title">{t('action.claimMezo')}</span>
-          <span className="action-body">
-            {b ? `${fmtMezo(b.earned)} MEZO` : t('action.claimMezo.body')}
-          </span>
+          {/* The live counter above shows the amount; a second, slower number here would disagree with it. */}
+          <span className="action-body">{t('action.claimMezo.body')}</span>
         </button>
         <button
           type="button"

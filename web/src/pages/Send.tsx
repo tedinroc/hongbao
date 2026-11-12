@@ -5,24 +5,54 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { useI18n, type MessageKey } from '../i18n';
 import { Envelope } from '../components/Envelope';
 import { IconCopy, IconEnvelope, IconExternal, IconMinus, IconPlus, IconShare } from '../components/Icons';
+import { LoanPanel } from '../components/LoanPanel';
 import { Qr } from '../components/Qr';
 import { ErrorNotice, Notice, Steps, TxLink, ChainPicker, type StepDef } from '../components/ui';
 import { WalletPicker, WalletSummary } from '../components/WalletPanel';
 import { createPacket, prepareMusd, prepareTxCount } from '../lib/actions';
 import { getConfig } from '../lib/api';
 import { chainInfo, defaultChainId, parseChainId, publicClient, type ChainId } from '../lib/chains';
-import { readBalances, readBtcPrice, readPoolQuote, readSendContext } from '../lib/chainData';
+import { capProblem, readBalances, readBtcPrice, readPoolQuote, readSendContext } from '../lib/chainData';
 import { packetLink } from '../lib/eip712';
-import { fmtBtc, fmtMusd, parseAmountInput, pct, utf8Bytes } from '../lib/format';
+import { shareUrls } from '../lib/share';
+import { cleanMessage, fmtBtc, fmtMusd, parseAmountInput, pct, stripControls, utf8Bytes } from '../lib/format';
 import { useAsync, useCopy } from '../lib/hooks';
+import { GAS, ORACLE_SLIPPAGE_BPS, btcPreflight, sizeKits } from '../lib/sendPlan';
+import {
+  FLOOR_DEFAULT_PCT,
+  borrowForPacket,
+  floorFromPct,
+  fmtRatio,
+  planBorrow,
+  readBorrowingFee,
+  readLoan,
+  type LoanProblem,
+} from '../lib/trove';
 import { useWallet } from '../lib/walletContext';
 
 const ZERO = '0x0000000000000000000000000000000000000000' as const;
-const DRIP = 3_000_000_000_000n; // 0.000003 BTC
-const TIP = 1_000_000_000_000n; // 0.000001 BTC
+const E18 = 10n ** 18n;
 const MIN_SHARE = 10n ** 16n; // 0.01 MUSD
-const SLIPPAGE_BPS = 150;
-const EXPIRY = { '1h': 3600, '24h': 86400, '3d': 3 * 86400, '7d': 7 * 86400 } as const;
+type Funding = 'musd' | 'btc' | 'loan';
+type Block = { key: MessageKey; vars?: Record<string, string | number> };
+
+function loanBlock(p: LoanProblem): Block {
+  switch (p.kind) {
+    case 'price':
+      return { key: 'loan.block.price' };
+    case 'recovery':
+      return { key: 'loan.block.recovery' };
+    case 'capacity':
+      return { key: 'loan.block.capacity', vars: { cap: fmtMusd(p.cap) } };
+    case 'floor':
+      return { key: 'loan.block.floor', vars: { icr: fmtRatio(p.icr), floor: fmtRatio(p.floor) } };
+    case 'system':
+      return { key: 'loan.block.system', vars: { ccr: fmtRatio(p.ccr) } };
+  }
+}
+// Hongbao.MAX_DURATION is 7 days from the block that includes the create; keep 15 minutes of
+// slack so a phone clock running ahead (or a slow block) cannot push "7 days" past it (BadExpiry).
+const EXPIRY = { '1h': 3600, '24h': 86400, '3d': 3 * 86400, '7d': 7 * 86400 - 900 } as const;
 type ExpiryKey = keyof typeof EXPIRY;
 
 interface Done {
@@ -47,7 +77,9 @@ export function Send() {
   const { active } = useWallet();
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const [funding, setFunding] = useState<'musd' | 'btc'>('musd');
+  // MUSD is the default everywhere; on mainnet Mezo's BTC pool is thin (SPEC.md, UI rules from the review).
+  const [funding, setFunding] = useState<Funding>('musd');
+  const [floorPct, setFloorPct] = useState(FLOOR_DEFAULT_PCT);
   const [amountStr, setAmountStr] = useState(() => {
     const q = params.get('amount');
     if (q && /^\d+$/.test(q)) {
@@ -64,7 +96,7 @@ export function Send() {
 
   const shownMessage = messageTouched ? message : t('send.messageDefault');
 
-  const ctx = useAsync(() => readSendContext(chainId), [chainId], Boolean(info.hongbao));
+  const ctx = useAsync(() => readSendContext(chainId, active?.address), [chainId, active?.address], Boolean(info.hongbao));
   const bal = useAsync(
     () => readBalances(chainId, active!.address),
     [chainId, active?.address],
@@ -78,7 +110,7 @@ export function Send() {
   const feeBps = ctx.data?.feeBps ?? 100n;
 
   // BTC funding: size btcIn so the pool returns about `amount` MUSD.
-  const [btcPlan, setBtcPlan] = useState<{ btcIn: bigint; quote: bigint } | null>(null);
+  const [btcPlan, setBtcPlan] = useState<{ btcIn: bigint; quote: bigint | null } | null>(null);
   const [quoting, setQuoting] = useState(false);
   useEffect(() => {
     setBtcPlan(null);
@@ -93,7 +125,7 @@ export function Send() {
       if (q0 && q0 > 0n) btcIn = (guess * amount + q0 - 1n) / q0;
       const q1 = await readPoolQuote(chainId, btcIn);
       if (live) {
-        setBtcPlan(q1 ? { btcIn, quote: q1 } : null);
+        setBtcPlan({ btcIn, quote: q1 });
         setQuoting(false);
       }
     }, 350);
@@ -109,52 +141,100 @@ export function Send() {
   const net = gross !== null && fee !== null ? gross - fee : null;
   const each = net !== null && shares > 0 ? net / BigInt(shares) : null;
 
+  // BTC funding preflight: the pool quote against the PriceFeed floor createWithBTC enforces.
   const btcIn = funding === 'btc' ? btcPlan?.btcIn ?? 0n : 0n;
-  const gasReserve = (gas.data ?? 2_000_000n) * 3_000_000n;
-  const fullKits = BigInt(shares) * (DRIP + TIP);
+  const pre = funding === 'btc' && btcPlan ? btcPreflight(btcPlan.btcIn, btcPlan.quote, price.data ?? null) : null;
+  const swapFloor = pre ? (pre.oracleMin > pre.minMusdOut ? pre.oracleMin : pre.minMusdOut) : null;
+
+  // Fund from my Mezo loan: borrow what the wallet's own MUSD does not cover.
+  const loanEligible = Boolean(active) && !passOn;
+  const loan = useAsync(() => readLoan(chainId, active!.address), [chainId, active?.address], loanEligible);
+  const showLoan = loanEligible && (active?.kind === 'injected' || Boolean(loan.data));
+  useEffect(() => {
+    if (funding === 'loan' && !showLoan) setFunding('musd');
+  }, [funding, showLoan]);
+  const borrowNeed = funding === 'loan' && amount && bal.data && amount > bal.data.musd ? amount - bal.data.musd : 0n;
+  const borrowFee = useAsync(() => readBorrowingFee(chainId, borrowNeed), [chainId, borrowNeed], borrowNeed > 0n);
+  const floor = floorFromPct(floorPct);
+  const loanPlan =
+    funding === 'loan' && loan.data && borrowNeed > 0n && borrowFee.data !== undefined && !borrowFee.loading
+      ? planBorrow(loan.data, borrowNeed, borrowFee.data, floor)
+      : null;
+  const loanReadFailed =
+    funding === 'loan' && ((Boolean(loan.error) && loan.data === undefined) || (borrowNeed > 0n && Boolean(borrowFee.error)));
+  const loanPending =
+    funding === 'loan' &&
+    !loanReadFailed &&
+    (loan.data === undefined || (borrowNeed > 0n && loanPlan === null) || bal.data === undefined);
+
+  const spendable = bal.data ? bal.data.musd + bal.data.smusd + bal.data.staked : null;
+  const prepCount = funding === 'musd' && amount && bal.data ? prepareTxCount(amount, bal.data) : 0;
+
+  // Gas kits sized to what the wallet's BTC pays after this send's own transactions.
   const btcBal = bal.data?.btc ?? null;
-  const dropKits = btcBal !== null && btcBal < fullKits + btcIn + gasReserve && btcBal >= btcIn + gasReserve / 2n;
-  const drip = dropKits ? 0n : DRIP;
-  const tip = dropKits ? 0n : TIP;
-  const kits = BigInt(shares) * (drip + tip);
+  const gasUnits =
+    funding === 'btc'
+      ? GAS.createBtc
+      : GAS.approve + GAS.create + (funding === 'loan' ? (borrowNeed > 0n ? GAS.borrow : 0n) : BigInt(prepCount) * GAS.prepare);
+  const kitPlan = sizeKits({ shares, btcBalance: btcBal, btcIn, gasPrice: gas.data ?? 2_000_000n, gasUnits });
+  const drip = kitPlan.dripPerShare;
+  const tip = kitPlan.tipPerShare;
+  const kits = kitPlan.kits;
 
   const attesterCfg = cfg.data?.chains[String(chainId)]?.attester ?? null;
   const attester = onePer && attesterCfg ? attesterCfg : ZERO;
 
-  const spendable = bal.data ? bal.data.musd + bal.data.smusd + bal.data.staked : null;
-  const prepCount = funding === 'musd' && amount && bal.data ? prepareTxCount(amount, bal.data) : 0;
-  const msgBytes = utf8Bytes(shownMessage);
+  const cleanShown = cleanMessage(shownMessage);
+  const msgBytes = utf8Bytes(stripControls(shownMessage));
+  const cap = useMemo(() => (net !== null && ctx.data ? capProblem(ctx.data, net) : null), [net, ctx.data]);
 
-  const oracleMin =
-    funding === 'btc' && price.data && btcIn > 0n ? ((btcIn * price.data) / 10n ** 18n) * BigInt(10_000 - SLIPPAGE_BPS) / 10_000n : null;
-  const poolLow = oracleMin !== null && btcPlan !== null && btcPlan.quote < oracleMin;
-
-  const invalid: MessageKey | null = useMemo(() => {
-    if (!info.enabled) return 'send.notLive';
-    if (ctx.data?.paused) return 'send.paused';
-    if (!amount || amount <= 0n) return 'send.invalid.amount';
-    if (shares < 1 || shares > 100) return 'send.invalid.shares';
-    if (msgBytes > 200) return 'send.invalid.message';
-    if (funding === 'btc' && price.data === null) return 'send.quote.unavailable';
-    if (net !== null && net / BigInt(shares) < MIN_SHARE) return 'send.invalid.min';
-    if (net !== null && ctx.data && net > ctx.data.maxPerPacket) return 'send.invalid.cap';
-    if (funding === 'musd' && spendable !== null && amount > spendable) return 'send.invalid.balance';
-    if (btcBal !== null && btcBal < btcIn + kits) return 'send.invalid.btc';
+  const block: Block | null = (() => {
+    if (!info.enabled) return { key: 'send.notLive' };
+    if (ctx.data?.paused) return { key: 'send.paused' };
+    if (!amount || amount <= 0n) return { key: 'send.invalid.amount' };
+    if (shares < 1 || shares > 100) return { key: 'send.invalid.shares' };
+    if (msgBytes > 200) return { key: 'send.invalid.message' };
+    if (funding === 'btc') {
+      if (price.data === null || pre?.problem === 'noPrice') return { key: 'send.quote.unavailable' };
+      if (pre?.problem === 'noQuote') return { key: 'send.quote.poolUnavailable' };
+      if (pre?.problem === 'poolLow' && btcPlan?.quote && price.data) {
+        return {
+          key: 'send.quote.poolLow',
+          vars: { pool: fmtMusd(btcPlan.quote), oracle: fmtMusd((btcPlan.btcIn * price.data) / E18) },
+        };
+      }
+    }
+    if (net !== null && net / BigInt(shares) < MIN_SHARE) return { key: 'send.invalid.min' };
+    if (cap) {
+      const vars = { cap: cap.kind !== 'total' ? fmtMusd(cap.cap) : '', room: cap.kind !== 'packet' ? fmtMusd(cap.room) : '' };
+      return { key: cap.kind === 'packet' ? 'send.invalid.cap' : cap.kind === 'sender' ? 'send.invalid.senderCap' : 'send.invalid.totalCap', vars };
+    }
+    if (funding === 'musd' && spendable !== null && amount > spendable) return { key: 'send.invalid.balance' };
+    if (funding === 'loan') {
+      if (loanReadFailed) return { key: 'loan.block.read' };
+      if (loan.data === null) return { key: 'loan.none', vars: { chain: t(info.nameKey) } };
+      if (loanPlan?.problem) return loanBlock(loanPlan.problem);
+    }
+    if (btcBal !== null && kitPlan.mode === 'none') {
+      return btcBal < btcIn + kitPlan.gasCost ? { key: 'send.invalid.btc' } : { key: 'send.kits.none', vars: { n: shares } };
+    }
     return null;
-  }, [info.enabled, ctx.data, amount, shares, msgBytes, funding, price.data, net, spendable, btcBal, btcIn, kits]);
+  })();
+  const waiting = (funding === 'btc' && (!btcPlan || quoting)) || loanPending;
 
   /* ---------------------------------------------------------------- submit */
 
   const keyRef = useRef<Hex | null>(null);
   const [busy, setBusy] = useState(false);
+  const [borrowing, setBorrowing] = useState<bigint>(0n);
   const [step, setStep] = useState<string | null>(null);
   const [seen, setSeen] = useState<string[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<Done | null>(null);
 
   const onSubmit = async () => {
-    if (!active || invalid || !amount || busy) return;
-    if (funding === 'btc' && (!btcPlan || poolLow)) return;
+    if (!active || block || waiting || !amount || busy) return;
+    if (funding === 'btc' && (!btcPlan || !pre || pre.problem)) return;
     setBusy(true);
     setError(null);
     setSeen([]);
@@ -167,17 +247,27 @@ export function Send() {
       const linkKey = keyRef.current;
       const claimKey = privateKeyToAccount(linkKey).address;
       if (funding === 'musd' && bal.data && prepCount > 0) await prepareMusd(active, chainId, amount, bal.data, report);
+      if (funding === 'loan') {
+        // Tx 1: borrow only what the wallet lacks right now (a retry after a failed tx 2 borrows nothing).
+        const fresh = await readBalances(chainId, active.address);
+        const need = amount > fresh.musd ? amount - fresh.musd : 0n;
+        if (need > 0n) {
+          setBorrowing(need);
+          report('borrow');
+          await borrowForPacket(active, chainId, need, floor);
+        }
+      }
       const created = await createPacket(
         active,
         chainId,
-        funding === 'musd'
-          ? { kind: 'musd', amount }
-          : {
+        funding === 'btc'
+          ? {
               kind: 'btc',
               btcIn: btcPlan!.btcIn,
-              minMusdOut: (btcPlan!.quote * BigInt(10_000 - SLIPPAGE_BPS)) / 10_000n,
-              maxSlippageBps: SLIPPAGE_BPS,
-            },
+              minMusdOut: pre!.minMusdOut,
+              maxSlippageBps: Number(ORACLE_SLIPPAGE_BPS),
+            }
+          : { kind: 'musd', amount },
         {
           shares,
           expiry: BigInt(Math.floor(Date.now() / 1000) + EXPIRY[expiry]),
@@ -185,7 +275,7 @@ export function Send() {
           attester,
           dripPerShare: drip,
           tipPerShare: tip,
-          message: shownMessage,
+          message: cleanShown,
         },
         report,
       );
@@ -193,8 +283,8 @@ export function Send() {
         chainId,
         id: created.id,
         txHash: created.txHash,
-        link: packetLink(window.location.origin, chainId, created.id, linkKey),
-        message: shownMessage,
+        link: packetLink(window.location.origin, chainId, created.id, linkKey, info.hongbao ?? undefined),
+        message: cleanShown,
         shares,
         net: created.net,
       });
@@ -206,6 +296,8 @@ export function Send() {
       setBusy(false);
       setStep(null);
       bal.reload();
+      ctx.reload();
+      if (funding === 'loan') loan.reload();
     }
   };
 
@@ -213,10 +305,13 @@ export function Send() {
 
   const stepDefs: StepDef[] = [
     ...(seen.includes('prepare') || prepCount > 0 ? [{ key: 'prepare', label: t('send.step.prepare') }] : []),
-    ...(funding === 'musd'
+    ...(seen.includes('borrow') || borrowNeed > 0n
+      ? [{ key: 'borrow', label: t('send.step.borrow', { amount: fmtMusd(borrowing || borrowNeed) }) }]
+      : []),
+    ...(funding !== 'btc'
       ? seen.includes('approve')
         ? [{ key: 'approve', label: t('send.step.approve') }]
-        : seen.includes('permit') || !seen.length
+        : seen.includes('permit') || !seen.includes('create')
           ? [{ key: 'permit', label: t('send.step.permit') }]
           : []
       : []),
@@ -228,7 +323,8 @@ export function Send() {
     : null;
 
   return (
-    <div className="stack-lg">
+    <div className="send-layout">
+      <div className="send-form stack-lg">
       <header>
         <div className="eyebrow">{passOn ? t('send.passOn.title') : t('brand.tagline')}</div>
         <h1 className="page-title">{passOn ? t('send.passOn.title') : t('send.title')}</h1>
@@ -259,6 +355,11 @@ export function Send() {
           <button type="button" aria-pressed={funding === 'btc'} onClick={() => setFunding('btc')} disabled={passOn}>
             BTC
           </button>
+          {showLoan ? (
+            <button type="button" aria-pressed={funding === 'loan'} onClick={() => setFunding('loan')}>
+              {t('send.fund.loan')}
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -291,17 +392,31 @@ export function Send() {
             ) : (
               <Notice kind="warn">{t('send.quote.unavailable')}</Notice>
             )}
-            {btcPlan ? (
+            {btcPlan?.quote ? (
               <span className="hint mono">
                 {t('send.quote.pool', { btc: fmtBtc(btcPlan.btcIn), musd: fmtMusd(btcPlan.quote) })}
               </span>
             ) : quoting ? (
               <span className="hint">{t('common.loading')}</span>
             ) : null}
-            {poolLow ? <Notice kind="warn">{t('send.quote.poolLow')}</Notice> : <span className="hint">{t('send.slippage')}</span>}
+            {pre && !pre.problem && swapFloor !== null ? (
+              <span className="hint">{t('send.slippage', { min: fmtMusd(swapFloor) })}</span>
+            ) : null}
+            {!info.testnet ? <span className="hint">{t('send.quote.thinPool')}</span> : null}
           </div>
         ) : null}
       </section>
+
+      {funding === 'loan' ? (
+        <LoanPanel
+          loan={loan.data}
+          loading={loan.loading}
+          plan={loanPlan}
+          borrow={borrowNeed}
+          floorPct={floorPct}
+          onFloorPct={setFloorPct}
+        />
+      ) : null}
 
       <section className="field">
         <span className="label">{t('send.shares')}</span>
@@ -375,7 +490,10 @@ export function Send() {
           </span>
         </label>
       </section>
+      </div>
 
+      {/* Wide screens: the summary and the button stay in view beside the form. */}
+      <aside className="send-aside stack">
       <section className="card stack">
         <h2 className="section-title">{t('send.summary')}</h2>
         <dl className="kv">
@@ -398,7 +516,10 @@ export function Send() {
             <dd>{net !== null ? `${fmtMusd(net)} MUSD` : '—'}</dd>
           </div>
           <div>
-            <dt>{t('send.sum.kits', { n: shares, each: `${fmtBtc(drip + tip)} BTC` })}</dt>
+            <dt>
+              {t('send.sum.kits')}
+              <span className="kv-sub">{t('send.sum.kitsEach', { n: shares, each: `${fmtBtc(drip + tip)} BTC` })}</span>
+            </dt>
             <dd>{fmtBtc(kits)} BTC</dd>
           </div>
           {funding === 'btc' ? (
@@ -413,26 +534,27 @@ export function Send() {
             <dd>{each !== null ? `${fmtMusd(each)} MUSD` : '—'}</dd>
           </div>
         </dl>
-        {dropKits ? <Notice kind="gold">{t('send.noKitsNote')}</Notice> : null}
-        {prepCount > 0 && amount && bal.data ? (
+        {kitPlan.mode === 'reduced' ? (
+          <Notice kind="gold">{t('send.kits.reduced', { each: fmtBtc(drip + tip) })}</Notice>
+        ) : kitPlan.mode === 'tipOnly' ? (
+          <Notice kind="gold">{t('send.kits.tipOnly')}</Notice>
+        ) : null}
+        {prepCount > 0 && amount && bal.data && spendable !== null && amount <= spendable ? (
           <Notice>{t('send.prepareNote', { amount: fmtMusd(amount - bal.data.musd), n: prepCount })}</Notice>
         ) : null}
+        <p className="hint">{t('send.yieldNote')}</p>
         <p className="hint">{t('gas.body')}</p>
       </section>
 
       <section className="stack">
         {busy ? <Steps steps={stepDefs} current={step} done={false} /> : null}
         <ErrorNotice error={error} />
-        {invalid && amountStr !== '' ? (
-          <Notice kind="warn">
-            {t(invalid, { cap: ctx.data ? fmtMusd(ctx.data.maxPerPacket) : '' })}
-          </Notice>
-        ) : null}
+        {block && amountStr !== '' ? <Notice kind="warn">{t(block.key, block.vars)}</Notice> : null}
         {active ? (
           <button
             type="button"
             className="btn btn-primary btn-lg btn-block"
-            disabled={busy || Boolean(invalid) || (funding === 'btc' && (!btcPlan || poolLow))}
+            disabled={busy || Boolean(block) || waiting}
             onClick={onSubmit}
           >
             {busy ? <span className="spinner" /> : <IconEnvelope />}
@@ -445,6 +567,7 @@ export function Send() {
         )}
         <p className="hint center">{t('send.keyNote')}</p>
       </section>
+      </aside>
 
       <WalletPicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
     </div>
@@ -468,19 +591,21 @@ function SendDone({ done, onAgain }: { done: Done; onAgain: () => void }) {
     return () => window.removeEventListener('beforeunload', onBefore);
   }, [secured]);
 
-  const lineText = `${t('done.lineText', { message: done.message, n: done.shares })}\n${done.link}`;
-  const lineUrl = `https://line.me/R/share?text=${encodeURIComponent(lineText)}`;
+  const shareText = t('done.shareText', { message: done.message, n: done.shares });
+  const urls = shareUrls(done.link, shareText);
   const path = done.link.replace(window.location.origin, '');
+  const shared = () => setSecured(true);
 
   return (
-    <div className="stack-lg">
+    <div className="stack-lg send-done">
       <Envelope
         state="peek"
+        size="sm"
         message={done.message}
         sub={`${done.shares} × ${fmtMusd(done.net / BigInt(done.shares))} MUSD`}
         letter={
           <>
-            <div className="env-letter-label">#{done.id.toString()}</div>
+            <div className="env-letter-label">{t('send.sum.net')}</div>
             <div className="env-letter-amount">{fmtMusd(done.net)}</div>
             <div className="env-letter-unit">MUSD</div>
           </>
@@ -497,28 +622,42 @@ function SendDone({ done, onAgain }: { done: Done; onAgain: () => void }) {
         <span>{done.link}</span>
       </div>
 
-      <div className="share-grid">
+      {/* Share order (SPEC.md, Phase 2): Telegram, WhatsApp, LINE, copy, QR, then the system sheet. */}
+      <div className="stack-sm">
+        <a className="btn btn-tg btn-lg btn-block" href={urls.telegram} target="_blank" rel="noreferrer noopener" onClick={shared}>
+          {t('done.telegram')}
+        </a>
+        <div className="share-grid">
+          <a className="btn btn-wa" href={urls.whatsapp} target="_blank" rel="noreferrer noopener" onClick={shared}>
+            {t('done.whatsapp')}
+          </a>
+          <a className="btn btn-line" href={urls.line} target="_blank" rel="noreferrer noopener" onClick={shared}>
+            {t('done.line')}
+          </a>
+        </div>
         <button
           type="button"
-          className="btn btn-primary"
+          className="btn btn-ghost btn-block"
           onClick={async () => {
-            if (await copy(done.link)) setSecured(true);
+            if (await copy(done.link)) shared();
           }}
         >
           <IconCopy />
           {copied ? t('common.copied') : t('done.copy')}
         </button>
-        <a className="btn btn-line" href={lineUrl} target="_blank" rel="noreferrer noopener" onClick={() => setSecured(true)}>
-          {t('done.line')}
-        </a>
+      </div>
+
+      <Qr text={done.link} label="QR" />
+
+      <div className="stack-sm">
         {canShare ? (
           <button
             type="button"
-            className="btn btn-ghost"
+            className="btn btn-ghost btn-block"
             onClick={async () => {
               try {
-                await navigator.share({ text: lineText });
-                setSecured(true);
+                await navigator.share({ text: shareText, url: done.link });
+                shared();
               } catch {
                 /* cancelled */
               }
@@ -528,13 +667,11 @@ function SendDone({ done, onAgain }: { done: Done; onAgain: () => void }) {
             {t('done.share')}
           </button>
         ) : null}
-        <Link className="btn btn-ghost" to={path} onClick={() => setSecured(true)}>
+        <Link className="btn btn-ghost btn-block" to={path} onClick={shared}>
           <IconExternal />
           {t('done.open')}
         </Link>
       </div>
-
-      <Qr text={done.link} label="QR" />
 
       <div className="row-between wrap">
         <TxLink chainId={done.chainId} hash={done.txHash} />

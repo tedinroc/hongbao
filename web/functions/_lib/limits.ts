@@ -2,8 +2,9 @@ import { ApiError } from "./errors";
 import { intVar, type Env } from "./env";
 
 /**
- * Claim rate limits for one-per-person packets (SPEC.md step 3) plus an hourly
- * per-IP cap on everything the relayer pays gas for.
+ * Claim rate limits on every packet the relayer serves (SPEC.md "v2 contract
+ * changes"): per device 1 claim per packet; per IP 5 claims per packet and 20
+ * claims per hour across all packets.
  *
  * Storage: the KV namespace HB_LIMITS when bound; otherwise a per-isolate Map
  * (good enough for local runs, weak in production: isolates are many and
@@ -101,8 +102,8 @@ export interface Reservation {
 export function limitsFor(env: Env) {
   return {
     devicePerPacket: intVar(env.LIMIT_DEVICE_PER_PACKET, 1, 1, 1000),
-    ipPerPacket: intVar(env.LIMIT_IP_PER_PACKET, 1, 1, 1000),
-    ipPerHour: intVar(env.LIMIT_IP_PER_HOUR, 10, 1, 100_000),
+    ipPerPacket: intVar(env.LIMIT_IP_PER_PACKET, 5, 1, 1000),
+    ipPerHour: intVar(env.LIMIT_IP_PER_HOUR, 20, 1, 100_000),
   };
 }
 

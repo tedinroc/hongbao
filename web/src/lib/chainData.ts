@@ -346,23 +346,57 @@ export async function readBalances(chainId: ChainId, who: Address): Promise<Bala
 
 export interface SendContext {
   feeBps: bigint;
+  /** Most MUSD (net of the fee) one packet may hold. */
   maxPerPacket: bigint;
+  /** Most MUSD one sender may have in open packets at once. */
+  maxPerSender: bigint;
+  /** Most MUSD all open packets may hold together. */
   maxOutstanding: bigint;
+  /** MUSD held for all open packets now. */
   outstanding: bigint;
+  /** MUSD held for this sender's open packets now (0 when no sender is given). */
+  senderOutstanding: bigint;
   paused: boolean;
 }
 
-export async function readSendContext(chainId: ChainId): Promise<SendContext> {
+/** Fee, caps and current totals that decide whether a new packet fits (Hongbao.sol v2 caps). */
+export async function readSendContext(chainId: ChainId, sender?: Address | null): Promise<SendContext> {
   const pc = publicClient(chainId);
   const address = hongbaoOf(chainId);
-  const [feeBps, maxPerPacket, maxOutstanding, outstanding, paused] = await Promise.all([
+  const [feeBps, maxPerPacket, maxPerSender, maxOutstanding, outstanding, senderOutstanding, paused] = await Promise.all([
     pc.readContract({ address, abi: hongbaoAbi, functionName: 'feeBps' }),
     pc.readContract({ address, abi: hongbaoAbi, functionName: 'maxPerPacket' }),
+    pc.readContract({ address, abi: hongbaoAbi, functionName: 'maxPerSender' }),
     pc.readContract({ address, abi: hongbaoAbi, functionName: 'maxOutstanding' }),
     pc.readContract({ address, abi: hongbaoAbi, functionName: 'outstanding' }),
+    sender
+      ? pc.readContract({ address, abi: hongbaoAbi, functionName: 'senderOutstanding', args: [sender] })
+      : Promise.resolve(0n),
     pc.readContract({ address, abi: hongbaoAbi, functionName: 'creationPaused' }),
   ]);
-  return { feeBps, maxPerPacket, maxOutstanding, outstanding, paused };
+  return { feeBps, maxPerPacket, maxPerSender, maxOutstanding, outstanding, senderOutstanding, paused };
+}
+
+export type CapProblem =
+  | { kind: 'packet'; cap: bigint }
+  | { kind: 'sender'; cap: bigint; room: bigint }
+  | { kind: 'total'; room: bigint };
+
+/**
+ * The cap a packet holding `net` MUSD (after the fee) would break, checked in the
+ * contract's order (OverPacketCap, OverOutstandingCap, OverSenderCap), or null.
+ */
+export function capProblem(ctx: SendContext, net: bigint): CapProblem | null {
+  if (net > ctx.maxPerPacket) return { kind: 'packet', cap: ctx.maxPerPacket };
+  if (ctx.outstanding + net > ctx.maxOutstanding) {
+    const room = ctx.maxOutstanding > ctx.outstanding ? ctx.maxOutstanding - ctx.outstanding : 0n;
+    return { kind: 'total', room };
+  }
+  if (ctx.senderOutstanding + net > ctx.maxPerSender) {
+    const room = ctx.maxPerSender > ctx.senderOutstanding ? ctx.maxPerSender - ctx.senderOutstanding : 0n;
+    return { kind: 'sender', cap: ctx.maxPerSender, room };
+  }
+  return null;
 }
 
 /** PriceFeed.fetchPrice(): MUSD per BTC (1e18). Null when the oracle is stale. */

@@ -1,0 +1,126 @@
+{
+  "generatedAt": "2026-11-12T08:37:14.412Z",
+  "chains": {
+    "31611": {
+      "summary": {
+        "contract": "0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4",
+        "fromBlock": 16730213,
+        "toBlock": 16730768,
+        "packets": 4,
+        "claims": 5,
+        "refunds": 1,
+        "musdIntoPackets": "114.53",
+        "senders": 1,
+        "outsideSenders": 0,
+        "recipients": 4,
+        "outsideRecipients": 0,
+        "outsideRecipientsWhoSignedOwnTx": 0,
+        "claimsByPayout": {
+          "stake": 3,
+          "save": 1,
+          "cash": 1
+        },
+        "fundedWithBTC": 1
+      },
+      "packets": [
+        {
+          "id": "1",
+          "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "tag": "team",
+          "net": "29.70",
+          "shares": 3,
+          "funding": "MUSD",
+          "tx": "0xd740a52bdae824f0fd7c3e0d7408c6a2b5f8c50e5175df3a80ae3042bebb4a81"
+        },
+        {
+          "id": "2",
+          "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "tag": "team",
+          "net": "29.70",
+          "shares": 3,
+          "funding": "MUSD",
+          "tx": "0x0683ed3bfd18a943a1ca31b958b9cbbb32a3570f0eac5a856b390d57e2c048fe"
+        },
+        {
+          "id": "3",
+          "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "tag": "team",
+          "net": "15.53",
+          "shares": 2,
+          "funding": "BTC",
+          "tx": "0xe4ea1f61eecab228af326865cb7a6d47809256e09d1eaba1e96e5c853a8af345"
+        },
+        {
+          "id": "4",
+          "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "tag": "team",
+          "net": "39.60",
+          "shares": 20,
+          "funding": "MUSD",
+          "tx": "0xdb8732327c61a15fe9fe95dca1afeffd7f147a6cf63463cdb2cb0210ec69bcc2"
+        }
+      ],
+      "claims": [
+        {
+          "id": "2",
+          "recipient": "0x825eC0b18883d6349De211Ab46403Ba0E185488e",
+          "tag": "team",
+          "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "amount": "9.90",
+          "payout": "Earn MEZO (staked)",
+          "signedOwnTx": true,
+          "tx": "0x07fd18c90055512dfe568f7287af9759fd43ed0e9f2c8743103039b3847bf892"
+        },
+        {
+          "id": "2",
+          "recipient": "0x87B50aB9EAfEAa1f7BF45727062d331386d9746b",
+          "tag": "team",
+          "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "amount": "9.90",
+          "payout": "Save (sMUSD)",
+          "signedOwnTx": false,
+          "tx": "0x8319785afa26c1b636c17992b99d3e8e877e4210831b92ec066c700519874bc0"
+        },
+        {
+          "id": "2",
+          "recipient": "0xC2fF27FFDB61e572B6b5c50c9E721F099F1e04b2",
+          "tag": "team",
+          "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "amount": "9.90",
+          "payout": "Cash (MUSD)",
+          "signedOwnTx": false,
+          "tx": "0x36ef7ae79b7a642e08f713a9220553a71cd91d1c540803787f8684c3c85cbbaf"
+        },
+        {
+          "id": "3",
+          "recipient": "0x825eC0b18883d6349De211Ab46403Ba0E185488e",
+          "tag": "team",
+          "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "amount": "7.77",
+          "payout": "Earn MEZO (staked)",
+          "signedOwnTx": true,
+          "tx": "0x02a6b5bfc884a99d7e1b69e4e7310932b09a1b285e5cbdd1ffe0ce5f40161352"
+        },
+        {
+          "id": "1",
+          "recipient": "0x023CeAc4f5db03F2402dA5Eaa0f3E5288ABf7f39",
+          "tag": "team",
+          "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "amount": "9.90",
+          "payout": "Earn MEZO (staked)",
+          "signedOwnTx": false,
+          "tx": "0xffef93fb13ba38adf17e2ff5e406ebbfb50efa9a95b92bd4adfafed18476406e"
+        }
+      ],
+      "refunds": [
+        {
+          "id": "3",
+          "to": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "amount": "7.77",
+          "inKind": false,
+          "tx": "0x944bf6339b6bc7743b7a63f6ff729faf1eb6cc0b1553fe49350a5d88660ccbf9"
+        }
+      ]
+    }
+  }
+}

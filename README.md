@@ -6,9 +6,10 @@ Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D
 
 | | |
 |---|---|
-| Live app | _added at deployment_ |
+| Live app | https://hongbao-mezo.pages.dev (no wallet needed to open or claim) |
 | Track | Track 2: Access and distribution (Mezo Adoption) |
-| Chains | Mezo testnet (live), Mezo mainnet (capped beta, see below) |
+| Contract | Mezo testnet [`0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4`](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4) (source verified); Mezo mainnet: capped beta, address added at launch |
+| Evidence | [docs/PROOF.md](docs/PROOF.md): every packet, claim and refund with explorer links, team vs outside wallets |
 | Status | Entirely new, built during Wave 2 |
 
 ## Why
@@ -46,10 +47,12 @@ expiry ──refund──▶ unclaimed MUSD and unused gas back to the sender
 
 ## Safety
 
-- No owner can move funds. A guardian can only pause new packets and lower deposit caps below hard caps fixed at deployment (mainnet beta: 50 MUSD per packet, 500 MUSD outstanding).
+- No owner can move funds. A guardian can only pause new packets, set caps below hard caps fixed at deployment (mainnet beta: 50 MUSD per packet, 100 MUSD open per sender, 500 MUSD open in total), and hand the role over in two steps.
 - Every packet is refundable by its sender at any time and by anyone (to the sender) after expiry. If the savings vault ever refuses a withdrawal, refunds and cash claims fall back to paying sMUSD in kind.
 - Native BTC goes out last under a reentrancy guard; recipients that refuse BTC can pull it later.
-- Tests: `cd contracts && forge test` (unit, adversarial and fuzz tests, including a conservation fuzz: every MUSD is either paid out or refunded).
+- Claims are bound by EIP-712 to the recipient, the payout and the relayer, so a copied transaction can neither redirect the money nor take the relay tip.
+- Reviewed in three independent passes (funds and accounting, authorization, correctness against Mezo's verified sources); every confirmed finding is fixed and covered by a test. See [docs/SECURITY.md](docs/SECURITY.md).
+- Tests: `cd contracts && forge test` (28 unit, adversarial and fuzz tests, including a conservation fuzz: every MUSD is either paid out or refunded); `cd web && npm test` (107 tests); `scripts/e2e-fork.sh` runs the contract, relayer and app together on a fork of Mezo testnet.
 
 ## Repository
 

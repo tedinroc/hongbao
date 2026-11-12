@@ -10,6 +10,8 @@ interface EnvelopeProps {
   letter?: ReactNode;
   seal?: string;
   label?: string;
+  /** sm: a smaller packet for pages where the actions matter more than the picture. */
+  size?: 'md' | 'sm';
 }
 
 /**
@@ -17,7 +19,7 @@ interface EnvelopeProps {
  * and is switched off under prefers-reduced-motion in styles.css. When mounted
  * straight into "open" it starts closed for two frames so the opening still plays.
  */
-export function Envelope({ state, message, sub, pill, letter, seal = '福', label }: EnvelopeProps) {
+export function Envelope({ state, message, sub, pill, letter, seal = '福', label, size = 'md' }: EnvelopeProps) {
   const [shown, setShown] = useState<EnvelopeProps['state']>(state === 'open' ? 'closed' : state);
   useEffect(() => {
     if (state !== 'open') {
@@ -35,7 +37,7 @@ export function Envelope({ state, message, sub, pill, letter, seal = '福', labe
   }, [state]);
   const cls = shown === 'closed' ? '' : shown;
   return (
-    <div className={`env-stage ${shown === 'open' ? 'open' : shown === 'peek' ? 'peek' : ''}`}>
+    <div className={`env-stage ${shown === 'open' ? 'open' : shown === 'peek' ? 'peek' : ''} ${size === 'sm' ? 'env-sm' : ''}`}>
       <div className={`env ${cls}`} role="img" aria-label={label}>
         <div className="env-back" />
         <div className="env-letter" aria-hidden={shown === 'closed'}>

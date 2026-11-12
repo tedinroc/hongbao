@@ -69,7 +69,10 @@ export interface ClaimRequest {
   packetId: bigint;
   recipient: Address;
   payout: PayoutValue;
+  /** EIP-712 Claim(packetId, recipient, payout, relayer) signed by the link key. */
   keySig: Hex;
+  /** The relayer the claim was signed for: `relayer` from /api/config. */
+  relayer: Address;
   device: string;
 }
 
@@ -372,9 +375,17 @@ export async function postClaim(req: ClaimRequest): Promise<{ txHash: Hex }> {
     recipient: req.recipient,
     payout: req.payout,
     keySig: req.keySig,
+    relayer: req.relayer,
     device: req.device,
   };
-  const res = await request('/api/claim', { method: 'POST', body: JSON.stringify(body) }, 45_000);
+  let res: unknown;
+  try {
+    res = await request('/api/claim', { method: 'POST', body: JSON.stringify(body) }, 45_000);
+  } catch (e) {
+    // The relayer changed since /api/config was read: drop the cached config so a retry signs for the new one.
+    if (e instanceof HongbaoError && e.code === 'WrongRelayer') configPromise = null;
+    throw e;
+  }
   const o = asRecord(res) ?? {};
   const txHash = toHash(pick(o, 'txHash', 'hash', 'transactionHash'));
   if (!txHash) throw new HongbaoError('RelayerUnavailable', 'No transaction hash in the response.');

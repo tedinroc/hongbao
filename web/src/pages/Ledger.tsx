@@ -12,7 +12,7 @@ import {
   type FollowUp,
   type HongbaoEvents,
 } from '../lib/chainData';
-import { fmtMusd, formatDateTime } from '../lib/format';
+import { cleanMessage, fmtMusd, formatDateTime } from '../lib/format';
 import { useAsync } from '../lib/hooks';
 import { addTeamAddress, isTeam } from '../lib/snapshot';
 
@@ -87,6 +87,8 @@ export function Ledger() {
   const created = data.data ? [...data.data.ev.created].reverse() : [];
   const claimed = data.data ? [...data.data.ev.claimed].reverse() : [];
   const refundedIds = new Set(data.data?.ev.refunded.map((r) => r.id.toString()) ?? []);
+  const openedById = new Map<string, number>();
+  for (const c of claimed) openedById.set(c.id.toString(), (openedById.get(c.id.toString()) ?? 0) + 1);
   const follow = data.data?.follow ?? [];
 
   return (
@@ -154,8 +156,7 @@ export function Ledger() {
 
           {data.data ? (
             <section className="stack">
-              <div className="row-between wrap">
-                <div className="tabs" role="tablist">
+              <div className="tabs" role="tablist">
                   {(
                     [
                       ['packets', t('ledger.packets'), created.length],
@@ -176,10 +177,6 @@ export function Ledger() {
                       {label} <span className="mono">{n}</span>
                     </button>
                   ))}
-                </div>
-                <button type="button" className="btn btn-quiet btn-sm" onClick={data.reload} aria-label={t('common.retry')}>
-                  <IconRefresh />
-                </button>
               </div>
 
               {tab === 'packets' ? (
@@ -195,8 +192,10 @@ export function Ledger() {
                           </b>
                           <span className="mono">{fmtMusd(e.net)} MUSD</span>
                         </div>
+                        <div className="ledger-msg">{t('common.quote', { text: cleanMessage(e.message) })}</div>
                         <div className="small muted">
-                          “{e.message}” · {e.funding === 1 ? 'BTC' : 'MUSD'}
+                          {t('me.opened', { opened: openedById.get(e.id.toString()) ?? 0, total: e.shares })} ·{' '}
+                          {t('ledger.paidWith', { asset: e.funding === 1 ? 'BTC' : 'MUSD' })}
                           {refundedIds.has(e.id.toString()) ? ` · ${t('me.status.refunded')}` : ''}
                         </div>
                         <div className="row-between small wrap">
@@ -264,12 +263,18 @@ export function Ledger() {
                 </button>
               ) : null}
 
-              <p className="hint">
-                {t('ledger.source', {
-                  from: data.data.ev.fromBlock.toString(),
-                  to: data.data.ev.toBlock.toString(),
-                })}
-              </p>
+              <div className="ledger-foot">
+                <p className="hint">
+                  {t('ledger.source', {
+                    from: data.data.ev.fromBlock.toString(),
+                    to: data.data.ev.toBlock.toString(),
+                  })}
+                </p>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={data.reload}>
+                  <IconRefresh />
+                  {t('ledger.refresh')}
+                </button>
+              </div>
             </section>
           ) : null}
         </>

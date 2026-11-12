@@ -12,22 +12,27 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
+  ANY_RELAYER,
   Payout,
+  attestDigest,
   attestTypedData,
+  checkLink,
   claimDigest,
   claimTypedData,
   linkKeyAddress,
   linkKeyFromHash,
   packetLink,
+  parseLinkFragment,
   permitTypedData,
   signClaimWithLinkKey,
   type PayoutValue,
 } from './eip712';
 
 /*
- * Vectors produced by the real contract: contracts/src/Hongbao.sol deployed with
- * Foundry's deployCodeTo at HB on chain 31611 / 31612, then hb.claimDigest(...),
- * hb.attestDigest(...), hb.domainSeparator() and vm.sign(0xA11CE, digest).
+ * Vectors produced by the real v2 contract: contracts/src/Hongbao.sol (with the
+ * test mocks as wiring) placed at HB with vm.etch on chain 31611 / 31612, then
+ * hb.claimDigest(id, recipient, payout, relayer), hb.attestDigest(id, recipient,
+ * payout, deadline), hb.domainSeparator() and vm.sign(0xA11CE, digest).
  * The MUSD domain separator is the live value from Mezo testnet
  * (cast call 0x1189…c503 "DOMAIN_SEPARATOR()(bytes32)").
  */
@@ -40,6 +45,7 @@ const CLAIM_VECTORS: {
   id: bigint;
   recipient: Address;
   payout: PayoutValue;
+  relayer: Address;
   digest: Hex;
   sig: Hex;
 }[] = [
@@ -48,24 +54,27 @@ const CLAIM_VECTORS: {
     id: 1n,
     recipient: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
     payout: Payout.Stake,
-    digest: '0x50c915753e2968b4ba0d9dc65b2f02a60e940b357f087313aaec285af234a5a5',
-    sig: '0x37a39ac01804a1cc808ece365c36b065108c1bbaf6df3b516a517b6eb3cc03b429ef054eee37382c1170580165e7380b63128bc22b69d90fcfd62c4595809df51b',
+    relayer: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    digest: '0x5e9c966a41c13132c531687ae601425eb8527ace2ce108df66bdf631b0b5245b',
+    sig: '0x4249800a61f27cd3a67ce59746586933812e32ee648d1a3af9ac92018f74262921f2ab2b4b508824046161e667eefcda356879bd862fecfeaff3c6177eede0291c',
   },
   {
     chainId: 31612,
     id: 42n,
     recipient: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
     payout: Payout.Save,
-    digest: '0x5152c59181228ddb130a8513b2da52dec784251b73402bd4b918ea62c40dc184',
-    sig: '0xf99639981065c359e2d276bc293fb05356689e60a18981b33001242a3d702c5a710e893c5a1000d1187f2cd4f03be0d5d5b640c9d6cb56448c478e7a94046f901c',
+    relayer: ANY_RELAYER,
+    digest: '0xdc5b57ebfd76bd1f3c9c9eea5954f140019b2b575fdb8a05cd58c8f0998ac9eb',
+    sig: '0x29a5895817d7cea6a872e51b361d840535074959eb0bf2eb0e3e14426e0b34f9001c3733d30fc17ecc19501d9a9960f27c500a2a3579e9d1ef3ce36d5af1708d1b',
   },
   {
     chainId: 31611,
     id: 18446744073709551623n, // 2^64 + 7
     recipient: '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
     payout: Payout.Cash,
-    digest: '0x6071825f9c14094a1f0da0d839d8a8171db1db1a6b841168fc34af3b8c4ba701',
-    sig: '0xd77c2042c68db53dce25348216cdf1378170ecc0657a4b535979a5c6cd3cc3ec2d73744a03f06433b5e9d1297c328c37c3b89e6f8a81689aa84accf10595ce041b',
+    relayer: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    digest: '0x3c859440ad0831617c9701b959ef72bf50495eab258714508b7b390dff2af3b1',
+    sig: '0x51e35d4b02735ca66360e0bbf91ef6d33529abd3d598303fb3ae6687fc2423ae3f1136a2a285dbe203d26a034b4eefa2be52700bf962e662b8182bdd3b9392d41b',
   },
 ];
 
@@ -89,16 +98,16 @@ describe('Claim typed data', () => {
 
   for (const v of CLAIM_VECTORS) {
     it(`digest matches the contract for packet ${v.id} on ${v.chainId}`, () => {
-      expect(claimDigest(v.chainId, HB, v.id, v.recipient, v.payout)).toBe(v.digest);
-      expect(hashTypedData(claimTypedData(v.chainId, HB, v.id, v.recipient, v.payout))).toBe(v.digest);
+      expect(claimDigest(v.chainId, HB, v.id, v.recipient, v.payout, v.relayer)).toBe(v.digest);
+      expect(hashTypedData(claimTypedData(v.chainId, HB, v.id, v.recipient, v.payout, v.relayer))).toBe(v.digest);
     });
 
     it(`hand-built EIP-712 hash agrees for packet ${v.id}`, () => {
-      const typeHash = keccak256(stringToHex('Claim(uint256 packetId,address recipient,uint8 payout)'));
+      const typeHash = keccak256(stringToHex('Claim(uint256 packetId,address recipient,uint8 payout,address relayer)'));
       const structHash = keccak256(
         encodeAbiParameters(
-          [{ type: 'bytes32' }, { type: 'uint256' }, { type: 'address' }, { type: 'uint8' }],
-          [typeHash, v.id, v.recipient, v.payout],
+          [{ type: 'bytes32' }, { type: 'uint256' }, { type: 'address' }, { type: 'uint8' }, { type: 'address' }],
+          [typeHash, v.id, v.recipient, v.payout, v.relayer],
         ),
       );
       const domainTypeHash = keccak256(
@@ -114,10 +123,10 @@ describe('Claim typed data', () => {
     });
 
     it(`link-key signature equals Foundry's vm.sign and recovers for packet ${v.id}`, async () => {
-      const sig = await signClaimWithLinkKey(LINK_KEY, v.chainId, HB, v.id, v.recipient, v.payout);
+      const sig = await signClaimWithLinkKey(LINK_KEY, v.chainId, HB, v.id, v.recipient, v.payout, v.relayer);
       expect(sig).toBe(v.sig);
       const recovered = await recoverTypedDataAddress({
-        ...claimTypedData(v.chainId, HB, v.id, v.recipient, v.payout),
+        ...claimTypedData(v.chainId, HB, v.id, v.recipient, v.payout, v.relayer),
         signature: sig,
       });
       expect(recovered).toBe(LINK_KEY_ADDRESS);
@@ -126,28 +135,47 @@ describe('Claim typed data', () => {
 
   it('a signature for one recipient does not recover the key for another', async () => {
     const v = CLAIM_VECTORS[0];
-    const sig = await signClaimWithLinkKey(LINK_KEY, v.chainId, HB, v.id, v.recipient, v.payout);
+    const sig = await signClaimWithLinkKey(LINK_KEY, v.chainId, HB, v.id, v.recipient, v.payout, v.relayer);
     const other = await recoverTypedDataAddress({
-      ...claimTypedData(v.chainId, HB, v.id, CLAIM_VECTORS[1].recipient, v.payout),
+      ...claimTypedData(v.chainId, HB, v.id, CLAIM_VECTORS[1].recipient, v.payout, v.relayer),
       signature: sig,
     });
     expect(other).not.toBe(LINK_KEY_ADDRESS);
+  });
+
+  it('a signature bound to one relayer does not recover the key for another relayer or for anyone', async () => {
+    const v = CLAIM_VECTORS[0];
+    const sig = await signClaimWithLinkKey(LINK_KEY, v.chainId, HB, v.id, v.recipient, v.payout, v.relayer);
+    for (const relayer of [CLAIM_VECTORS[2].relayer, ANY_RELAYER]) {
+      const other = await recoverTypedDataAddress({
+        ...claimTypedData(v.chainId, HB, v.id, v.recipient, v.payout, relayer),
+        signature: sig,
+      });
+      expect(other).not.toBe(LINK_KEY_ADDRESS);
+    }
   });
 
   it('a freshly generated key signs claims that recover to its own address', async () => {
     const key = '0x4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318' as Hex;
     const addr = privateKeyToAccount(key).address;
     expect(linkKeyAddress(key)).toBe(addr);
-    const td = claimTypedData(31611, HB, 7n, '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', Payout.Save);
-    const sig = await signClaimWithLinkKey(key, 31611, HB, 7n, '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', Payout.Save);
+    const relayer: Address = '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC';
+    const td = claimTypedData(31611, HB, 7n, '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', Payout.Save, relayer);
+    const sig = await signClaimWithLinkKey(key, 31611, HB, 7n, '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', Payout.Save, relayer);
     expect(await recoverTypedDataAddress({ ...td, signature: sig })).toBe(addr);
   });
 });
 
 describe('Attest typed data', () => {
-  it('digest matches Hongbao.attestDigest()', () => {
-    const td = attestTypedData(31611, HB, 1n, '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', 1800000600n);
-    expect(hashTypedData(td)).toBe('0x4fa83cfe11dc0dbd8c8d84826ef24356995019e67d2e2d404f7453169234efec');
+  const who: Address = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
+
+  it('digest matches Hongbao.attestDigest(id, recipient, payout, deadline)', () => {
+    expect(hashTypedData(attestTypedData(31611, HB, 1n, who, Payout.Stake, 1800000600n))).toBe(
+      '0x42b745baa9ab8b0028f5365d246efeb890ec5131a20cf622735bceea2f946082',
+    );
+    expect(attestDigest(31611, HB, 1n, who, Payout.Cash, 1800000600n)).toBe(
+      '0xde6bef9d992bb116d89a8745ca8ca0c925d8b558f200a548e528a2336d6ab2eb',
+    );
   });
 });
 
@@ -210,5 +238,33 @@ describe('link format', () => {
     expect(linkKeyFromHash(`#k=0x${'0'.repeat(64)}`)).toBeNull();
     expect(linkKeyFromHash(`#k=0x${'f'.repeat(64)}`)).toBeNull();
     expect(linkKeyFromHash('#x=1')).toBeNull();
+  });
+
+  it('new links carry the contract: #k=<key>&c=<hongbao>', () => {
+    const link = packetLink('https://example.test', 31611, 12n, LINK_KEY, HB);
+    expect(link).toBe(`https://example.test/c/31611/12#k=${LINK_KEY}&c=${HB}`);
+    const frag = parseLinkFragment(new URL(link).hash);
+    expect(frag).toEqual({ key: LINK_KEY, hasContract: true, contract: HB });
+    expect(linkKeyFromHash(new URL(link).hash)).toBe(LINK_KEY);
+  });
+
+  it('opens a link only when its contract and key match the packet', () => {
+    const other: Address = '0x9999999999999999999999999999999999999999';
+    const withC = parseLinkFragment(`#k=${LINK_KEY}&c=${HB.toLowerCase()}`);
+    expect(checkLink(withC, HB)).toBe('ok');
+    expect(checkLink(withC, HB, LINK_KEY_ADDRESS)).toBe('ok');
+    expect(checkLink(withC, HB, other)).toBe('keyMismatch');
+    // Another deployment's link is refused before the packet is even read.
+    expect(checkLink(parseLinkFragment(`#k=${LINK_KEY}&c=${other}`), HB)).toBe('otherDeployment');
+    expect(checkLink(parseLinkFragment(`#k=${LINK_KEY}&c=0x12`), HB)).toBe('otherDeployment');
+    expect(checkLink(parseLinkFragment(`#c=${other}`), HB)).toBe('otherDeployment');
+  });
+
+  it('keeps accepting old #k=-only links, checked against the packet’s claimKey', () => {
+    const old = parseLinkFragment(`#k=${LINK_KEY}`);
+    expect(old).toEqual({ key: LINK_KEY, hasContract: false, contract: null });
+    expect(checkLink(old, HB, LINK_KEY_ADDRESS)).toBe('ok');
+    expect(checkLink(old, HB, HB)).toBe('keyMismatch');
+    expect(checkLink(parseLinkFragment(''), HB, LINK_KEY_ADDRESS)).toBe('noKey');
   });
 });

@@ -11,7 +11,7 @@ import {
 } from "viem";
 import { signTransaction, signTypedData } from "viem/accounts";
 import { PAYOUTS, ZERO_ADDRESS, hongbaoAbi, type PacketView } from "./abi";
-import { publicClient, type ChainId } from "./chains";
+import { MEZO, publicClient, type ChainId } from "./chains";
 import { chainEnabled, hongbaoAddress } from "./deployments";
 import { ATTEST_TTL, ATTEST_TYPES, hongbaoDomain } from "./eip712";
 import { attesterSigner, intVar, relayerSigner, type Env, type Signer } from "./env";
@@ -25,12 +25,31 @@ export interface ClaimInput {
   recipient: Address;
   payout: 0 | 1 | 2;
   keySig: Hex;
+  /** The relayer the link key signed for (the browser reads it from /api/config); null when the client left it out. */
+  relayer: Address | null;
   device: string | null;
   ip: string;
 }
 
 /** A claim is ~300k gas; anything far above that is not a normal claim. */
 const MAX_CLAIM_GAS = 1_500_000n;
+
+/**
+ * The packet's tip must cover the claim's gas at the current gas price with
+ * 20% to spare (SPEC.md relayer policy), so relaying never runs at a loss.
+ */
+const TIP_MARGIN_NUM = 12n;
+const TIP_MARGIN_DEN = 10n;
+
+/**
+ * Addresses Hongbao.claim refuses as a recipient (mirrors the contract's
+ * BadRecipient check): the Hongbao itself and Mezo's sMUSD vault, sMUSD gauge,
+ * MUSD and BTC token contracts. Checked before simulating.
+ */
+export function protocolAddresses(chainId: ChainId, hongbao: Address): Address[] {
+  const m = MEZO[chainId];
+  return [hongbao, m.smusd, m.gauge, m.musd, m.btc];
+}
 const NONCE_RETRIES = 4;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -151,8 +170,16 @@ export async function relayClaim(env: Env, input: ClaimInput): Promise<ApiClaimR
   const hongbao = hongbaoAddress(env, chainId) as Address;
   const relayer = relayerSigner(env);
   if (!relayer) throw new ApiError("RelayerNotConfigured", 503);
+  // We submit claim(..., relayer = our address, ...); a link signature bound to another
+  // relayer (or to "anyone", address 0) would only fail on chain as BadSignature.
+  if (input.relayer && !isAddressEqual(input.relayer, relayer.address)) {
+    throw new ApiError("WrongRelayer", 409, undefined, { relayer: relayer.address });
+  }
   if (isAddressEqual(recipient, ZERO_ADDRESS)) throw new ApiError("ZeroAddress", 400);
-  if (isAddressEqual(recipient, hongbao)) throw new ApiError("BadRequest", 400, "recipient: cannot be the Hongbao contract", { field: "recipient" });
+  if (protocolAddresses(chainId, hongbao).some((a) => isAddressEqual(a, recipient))) {
+    throw new ApiError("BadRecipient", 400, undefined, { field: "recipient" });
+  }
+  if (!device) throw new ApiError("DeviceRequired", 400, undefined, { field: "device" });
 
   const client = publicClient(env, chainId);
 
@@ -176,24 +203,25 @@ export async function relayClaim(env: Env, input: ClaimInput): Promise<ApiClaimR
   if (packet.refunded || packet.sharesLeft === 0) throw new ApiError("PacketClosed", 410);
   if (blockTs >= packet.expiry) throw new ApiError("Expired", 410);
   if (already) throw new ApiError("AlreadyClaimed", 409);
+  // A packet without a tip can never pay for its own relay (full check after estimating gas).
+  if (packet.tipPerShare === 0n) throw new ApiError("TipTooLow", 422);
 
-  // 2. Rate limits (+ attestation for one-per-person packets that name our attester).
-  const limits = limitsFor(env);
-  const hour = hourBucket();
-  const rules: LimitRule[] = [{ name: "ip-per-hour", parts: [ip, hour.bucket], limit: limits.ipPerHour, exp: hour.exp }];
+  // 2. Attester (one-per-person packets that name ours) and rate limits on every packet.
   let attester: Signer | null = null;
   if (!isAddressEqual(packet.attester, ZERO_ADDRESS)) {
     attester = attesterSigner(env);
     if (!attester) throw new ApiError("AttesterNotConfigured", 503);
     if (!isAddressEqual(packet.attester, attester.address)) throw new ApiError("ForeignAttester", 409);
-    if (!device) throw new ApiError("DeviceRequired", 400, undefined, { field: "device" });
-    const scope = [String(chainId), hongbao.toLowerCase(), packetId.toString()];
-    const exp = Math.min(Number(packet.expiry) + 3600, Math.floor(Date.now() / 1000) + 31 * 86_400);
-    rules.push(
-      { name: "device-per-packet", parts: [...scope, device], limit: limits.devicePerPacket, exp },
-      { name: "ip-per-packet", parts: [...scope, ip], limit: limits.ipPerPacket, exp },
-    );
   }
+  const limits = limitsFor(env);
+  const hour = hourBucket();
+  const scope = [String(chainId), hongbao.toLowerCase(), packetId.toString()];
+  const exp = Math.min(Number(packet.expiry) + 3600, Math.floor(Date.now() / 1000) + 31 * 86_400);
+  const rules: LimitRule[] = [
+    { name: "device-per-packet", parts: [...scope, device], limit: limits.devicePerPacket, exp },
+    { name: "ip-per-packet", parts: [...scope, ip], limit: limits.ipPerPacket, exp },
+    { name: "ip-per-hour", parts: [ip, hour.bucket], limit: limits.ipPerHour, exp: hour.exp },
+  ];
   const reservation = await reserve(env, rules);
 
   try {
@@ -207,10 +235,10 @@ export async function relayClaim(env: Env, input: ClaimInput): Promise<ApiClaimR
         domain: hongbaoDomain(chainId, hongbao),
         types: ATTEST_TYPES,
         primaryType: "Attest",
-        message: { packetId, recipient, deadline: attestDeadline },
+        message: { packetId, recipient, payout, deadline: attestDeadline },
       });
     }
-    const args = [packetId, recipient, payout, keySig, attestDeadline, attestSig] as const;
+    const args = [packetId, recipient, payout, relayer.address, keySig, attestDeadline, attestSig] as const;
 
     // 3. Simulate from the relayer address; a revert comes back as its custom-error name.
     let amount: bigint;
@@ -228,21 +256,32 @@ export async function relayClaim(env: Env, input: ClaimInput): Promise<ApiClaimR
       throw callError(e);
     }
 
-    // 4. Gas limit = estimate × 1.3.
-    let gas: bigint;
+    // 4. Gas limit = estimate × 1.3; the tip must cover estimate × gas price × 1.2.
+    let estimate: bigint;
+    let gasPrice: bigint;
     try {
-      gas = await client.estimateContractGas({
-        address: hongbao,
-        abi: hongbaoAbi,
-        functionName: "claim",
-        args,
-        account: relayer.address,
-      });
+      [estimate, gasPrice] = await Promise.all([
+        client.estimateContractGas({
+          address: hongbao,
+          abi: hongbaoAbi,
+          functionName: "claim",
+          args,
+          account: relayer.address,
+        }),
+        client.getGasPrice(),
+      ]);
     } catch (e) {
       throw callError(e);
     }
-    gas = (gas * 13n) / 10n;
+    const gas = (estimate * 13n) / 10n;
     if (gas > MAX_CLAIM_GAS) throw new ApiError("GasLimitTooHigh", 422);
+    const cost = estimate * gasPrice;
+    if (packet.tipPerShare * TIP_MARGIN_DEN < cost * TIP_MARGIN_NUM) {
+      throw new ApiError("TipTooLow", 422, undefined, {
+        tipPerShare: packet.tipPerShare.toString(),
+        needed: ((cost * TIP_MARGIN_NUM + TIP_MARGIN_DEN - 1n) / TIP_MARGIN_DEN).toString(),
+      });
+    }
 
     // 5. Send; the client waits for the receipt.
     const data = encodeFunctionData({ abi: hongbaoAbi, functionName: "claim", args });

@@ -32,7 +32,7 @@ export function ErrorNotice({ error }: { error: unknown }) {
   return (
     <Notice kind="error">
       {t(`err.${code}` as MessageKey)}
-      {code === 'Unknown' && detail ? <div className="tiny mt-2 mono">{detail}</div> : null}
+      {(code === 'Unknown' || code === 'LoanBlocked') && detail ? <div className="tiny mt-2 mono">{detail}</div> : null}
     </Notice>
   );
 }
@@ -137,7 +137,7 @@ export function AddressLink({
 export function TxLink({ chainId, hash, label }: { chainId: ChainId; hash: string; label?: string }) {
   const { t } = useI18n();
   return (
-    <a className="row small" href={txUrl(chainId, hash)} target="_blank" rel="noreferrer noopener" style={{ gap: 6 }}>
+    <a className="tx-link" href={txUrl(chainId, hash)} target="_blank" rel="noreferrer noopener">
       {label ?? t('common.viewTx')}
       <IconExternal style={{ width: 15, height: 15 }} />
     </a>
@@ -159,6 +159,26 @@ export function ChainPicker({
 }) {
   const { t } = useI18n();
   const ids = [...CHAIN_IDS].reverse(); // testnet first visually, mainnet second
+  const usable = (id: ChainId) => {
+    const info = chainInfo(id);
+    return need === 'enabled' ? info.enabled : need === 'deployed' ? Boolean(info.hongbao) : true;
+  };
+  // Only one network to pick: say which one it is instead of showing a switch with a dead half.
+  if (ids.filter(usable).length === 1 && usable(value)) {
+    return (
+      <div className="net-static" role="group" aria-label={t('common.network')}>
+        <span className="net-dot" aria-hidden />
+        <b>{t(chainInfo(value).nameKey)}</b>
+        {ids
+          .filter((id) => id !== value)
+          .map((id) => (
+            <span key={id} className="net-other">
+              {t('chain.otherNotLive', { chain: t(chainInfo(id).nameKey) })}
+            </span>
+          ))}
+      </div>
+    );
+  }
   return (
     <div className="seg" role="group" aria-label={t('common.network')}>
       {ids.map((id) => {

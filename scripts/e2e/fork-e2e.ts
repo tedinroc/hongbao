@@ -9,6 +9,11 @@
  * constructed Requests. E2E_MODE=http runs a smaller suite over HTTP against
  * `wrangler pages dev` at E2E_BASE (real Workers runtime).
  *
+ * Contract v2: claims are signed Claim(packetId, recipient, payout, relayer) with
+ * relayer = our relayer; the relayer signs Attest(packetId, recipient, payout, deadline),
+ * submits claim(..., relayer, ...), refuses TipTooLow / BadRecipient / WrongRelayer, and
+ * rate-limits every packet (device 1, IP 5 per packet, IP 20 per hour).
+ *
  * Accounts: anvil's default mnemonic only. Keys are never printed.
  */
 import {
@@ -38,6 +43,7 @@ import { CHAINS, MEZO } from "../../web/functions/_lib/chains";
 import { ATTEST_TYPES, CLAIM_TYPES, hongbaoDomain } from "../../web/functions/_lib/eip712";
 import type { Env } from "../../web/functions/_lib/env";
 import { decodeRevert } from "../../web/functions/_lib/errors";
+import { protocolAddresses } from "../../web/functions/_lib/relay";
 import { handleClaim } from "../../web/functions/api/claim";
 import { handleConfig } from "../../web/functions/api/config";
 import { handlePacket } from "../../web/functions/api/packet";
@@ -85,9 +91,11 @@ const env: Env = {
   RPC_31611: RPC,
   HONGBAO_31611: HONGBAO,
   DEPLOY_BLOCK_31611: DEPLOY_BLOCK,
-  // anvil suggests a >= 1 gwei tip (Mezo: ~16 wei), above the 1 gwei production cap.
+  // anvil suggests a 1 gwei priority fee (Mezo: ~16 wei), above the 1 gwei production cap.
   MAX_FEE_PER_GAS_WEI: "5000000000",
 };
+
+const ZERO: Address = "0x0000000000000000000000000000000000000000";
 
 const erc20 = parseAbi([
   "function balanceOf(address) view returns (uint256)",
@@ -242,7 +250,17 @@ interface Made {
 }
 
 /** Create a packet exactly like the web app: link key generated locally, MUSD via EIP-2612 permit. */
-async function createPacket(opts: { amount: string; shares: number; attester: Address; ttl: number; message?: string }): Promise<Made> {
+async function createPacket(opts: {
+  amount: string;
+  shares: number;
+  attester: Address;
+  ttl: number;
+  message?: string;
+  drip?: bigint;
+  tip?: bigint;
+}): Promise<Made> {
+  const drip = opts.drip ?? DRIP;
+  const tip = opts.tip ?? TIP;
   const linkKey = generatePrivateKey();
   const claimKey = privateKeyToAccount(linkKey).address;
   const amount = parseUnits(opts.amount, 18);
@@ -270,8 +288,8 @@ async function createPacket(opts: { amount: string; shares: number; attester: Ad
     expiry: now + BigInt(opts.ttl),
     claimKey,
     attester: opts.attester,
-    dripPerShare: DRIP,
-    tipPerShare: TIP,
+    dripPerShare: drip,
+    tipPerShare: tip,
     message: opts.message ?? MESSAGE,
   };
   const w = walletFor(sender);
@@ -280,7 +298,7 @@ async function createPacket(opts: { amount: string; shares: number; attester: Ad
     abi: hongbaoAbi,
     functionName: "createWithPermit",
     args: [amount, params, deadline, vNum, r, s],
-    value: BigInt(opts.shares) * (DRIP + TIP),
+    value: BigInt(opts.shares) * (drip + tip),
   });
   const rc = await pub.waitForTransactionReceipt({ hash: txHash });
   if (rc.status !== "success") throw new Error("createWithPermit reverted");
@@ -290,13 +308,13 @@ async function createPacket(opts: { amount: string; shares: number; attester: Ad
   return { id: ev.args.id, linkKey, amount, net: ev.args.net, shares: opts.shares, txHash };
 }
 
-/** Sign Claim(packetId, recipient, payout) with the link key, as the browser does. */
-async function signClaim(linkKey: Hex, id: bigint, recipient: Address, payout: number): Promise<Hex> {
+/** Sign Claim(packetId, recipient, payout, relayer) with the link key, as the browser does (relayer from /api/config). */
+async function signClaim(linkKey: Hex, id: bigint, recipient: Address, payout: number, signFor: Address = relayer): Promise<Hex> {
   return privateKeyToAccount(linkKey).signTypedData({
     domain: hongbaoDomain(CHAIN_ID, HONGBAO),
     types: CLAIM_TYPES,
     primaryType: "Claim",
-    message: { packetId: id, recipient, payout },
+    message: { packetId: id, recipient, payout, relayer: signFor },
   });
 }
 
@@ -309,10 +327,20 @@ async function postClaim(
   p: Made,
   recipient: Address,
   payout: number,
-  o: { device?: string | null; ip?: string; signPayout?: number; envPatch?: Partial<Env> } = {},
+  o: {
+    device?: string | null;
+    ip?: string;
+    signPayout?: number;
+    /** relayer the link key signs for (default: ours) */
+    signFor?: Address;
+    /** `relayer` in the body (default: ours; null leaves it out) */
+    relayerField?: Address | null;
+    envPatch?: Partial<Env>;
+  } = {},
 ): Promise<ApiResult> {
-  const keySig = await signClaim(p.linkKey, p.id, recipient, o.signPayout ?? payout);
+  const keySig = await signClaim(p.linkKey, p.id, recipient, o.signPayout ?? payout, o.signFor ?? relayer);
   const body: Record<string, unknown> = { chainId: CHAIN_ID, packetId: p.id.toString(), recipient, payout, keySig };
+  if (o.relayerField !== null) body.relayer = o.relayerField ?? relayer;
   if (o.device !== null) body.device = o.device ?? freshDevice();
   const cpu0 = process.cpuUsage();
   const res = await api("/api/claim", {
@@ -338,9 +366,9 @@ interface ClaimOutcome {
 /** Claim through the API, wait for the receipt like the client, and verify the money landed. */
 async function claimAndVerify(label: string, p: Made, payout: 0 | 1 | 2, o: { device?: string; ip?: string } = {}): Promise<ClaimOutcome> {
   const recipient = privateKeyToAccount(generatePrivateKey()).address; // brand-new wallet, no BTC, no MUSD
-  const digest = await pub.readContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "claimDigest", args: [p.id, recipient, payout] });
-  const local = hashTypedData({ domain: hongbaoDomain(CHAIN_ID, HONGBAO), types: CLAIM_TYPES, primaryType: "Claim", message: { packetId: p.id, recipient, payout } });
-  check(`${label}: viem Claim digest == contract claimDigest`, digest === local);
+  const digest = await pub.readContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "claimDigest", args: [p.id, recipient, payout, relayer] });
+  const local = hashTypedData({ domain: hongbaoDomain(CHAIN_ID, HONGBAO), types: CLAIM_TYPES, primaryType: "Claim", message: { packetId: p.id, recipient, payout, relayer } });
+  check(`${label}: viem Claim digest == contract claimDigest(…, relayer)`, digest === local);
 
   const relayerBefore = await pub.getBalance({ address: relayer });
   const res = await postClaim(p, recipient, payout, o);
@@ -354,7 +382,7 @@ async function claimAndVerify(label: string, p: Made, payout: 0 | 1 | 2, o: { de
   const ev = parseEventLogs({ abi: hongbaoAbi, logs: rc.logs, eventName: "Claimed" })[0] as unknown as {
     args: { id: bigint; recipient: Address; relayer: Address; amount: bigint; payout: number };
   };
-  check(`${label}: Claimed event for recipient`, !!ev && ev.args.recipient === recipient && ev.args.id === p.id);
+  check(`${label}: Claimed event for recipient, relayed by our relayer`, !!ev && ev.args.recipient === recipient && ev.args.id === p.id && ev.args.relayer === relayer);
   check(`${label}: paid as requested (${["Stake", "Save", "Cash"][payout]})`, ev?.args.payout === payout, `event payout=${ev?.args.payout}`);
   check(`${label}: simulation predicted amount`, res.body.expected?.amount === ev?.args.amount.toString());
   const amount = ev?.args.amount ?? 0n;
@@ -428,9 +456,17 @@ async function directSuite() {
   const E = await createPacket({ amount: "1", shares: 1, attester: "0x0000000000000000000000000000000000000000", ttl: 660 });
   check("packet E: expires in 11 minutes", E.id === D.id + 1n, `id ${E.id}`);
 
-  const ad = await pub.readContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "attestDigest", args: [A.id, attester, 123n] });
-  const adLocal = hashTypedData({ domain: hongbaoDomain(CHAIN_ID, HONGBAO), types: ATTEST_TYPES, primaryType: "Attest", message: { packetId: A.id, recipient: attester, deadline: 123n } });
-  check("attester Attest digest == contract attestDigest", ad === adLocal);
+  {
+    const digests: Hex[] = [];
+    let same = true;
+    for (const payout of [0, 1, 2]) {
+      const ad = await pub.readContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "attestDigest", args: [A.id, attester, payout, 123n] });
+      const adLocal = hashTypedData({ domain: hongbaoDomain(CHAIN_ID, HONGBAO), types: ATTEST_TYPES, primaryType: "Attest", message: { packetId: A.id, recipient: attester, payout, deadline: 123n } });
+      same &&= ad === adLocal;
+      digests.push(ad as Hex);
+    }
+    check("attester Attest digest == contract attestDigest(…, payout, deadline), one per payout", same && new Set(digests).size === 3);
+  }
 
   section("claims on packet A: Stake, Save, Cash (relayed, attested)");
   const dev1 = freshDevice();
@@ -451,19 +487,31 @@ async function directSuite() {
     let name = "";
     try {
       const sig = await signClaim(A.linkKey, A.id, stakeRecipient, 0);
-      await pub.simulateContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "claim", args: [A.id, stakeRecipient, 0, sig, 0n, "0x"], account: relayer });
+      await pub.simulateContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "claim", args: [A.id, stakeRecipient, 0, relayer, sig, 0n, "0x"], account: relayer });
     } catch (e) {
       name = decodeRevert(e)?.name ?? "";
     }
     check("contract revert for double claim decodes to AlreadyClaimed", name === "AlreadyClaimed", name);
   }
   {
+    // A relayer-bound claim copied and submitted by someone else.
+    let name = "";
+    try {
+      const someone = privateKeyToAccount(generatePrivateKey()).address;
+      const sig = await signClaim(B.linkKey, B.id, someone, 1);
+      await pub.simulateContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "claim", args: [B.id, someone, 1, relayer, sig, 0n, "0x"], account: stranger.address });
+    } catch (e) {
+      name = decodeRevert(e)?.name ?? "";
+    }
+    check("contract: a copied relayer-bound claim from another sender decodes to WrongRelayer", name === "WrongRelayer", name);
+  }
+  {
     const r = await postClaim(A, privateKeyToAccount(generatePrivateKey()).address, 0, { device: dev1 });
     check("same device, same packet → 429 device-per-packet", r.status === 429 && r.body.limit === "device-per-packet", JSON.stringify(r.body));
   }
   {
-    const r = await postClaim(A, privateKeyToAccount(generatePrivateKey()).address, 0, { ip: ip1 });
-    check("same IP, same packet → 429 ip-per-packet", r.status === 429 && r.body.limit === "ip-per-packet", JSON.stringify(r.body));
+    const r = await postClaim(A, privateKeyToAccount(generatePrivateKey()).address, 0, { ip: ip1, envPatch: { LIMIT_IP_PER_PACKET: "1" } });
+    check("same IP, same packet over LIMIT_IP_PER_PACKET → 429 ip-per-packet", r.status === 429 && r.body.limit === "ip-per-packet", JSON.stringify(r.body));
   }
   {
     const r = await postClaim(C, privateKeyToAccount(generatePrivateKey()).address, 0);
@@ -472,12 +520,23 @@ async function directSuite() {
   {
     const r = await postClaim(D, privateKeyToAccount(generatePrivateKey()).address, 0, { device: null });
     check("one-per-person packet without device → 400 DeviceRequired", r.status === 400 && r.body.error === "DeviceRequired", JSON.stringify(r.body));
+    const r2 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 0, { device: null });
+    check("open packet without device → 400 DeviceRequired (every packet is limited per device)", r2.status === 400 && r2.body.error === "DeviceRequired", JSON.stringify(r2.body));
   }
   const devX = freshDevice();
   const ipX = freshIp();
   {
     const r = await postClaim(D, privateKeyToAccount(generatePrivateKey()).address, 0, { device: devX, ip: ipX, signPayout: 1 });
     check("link signature for another payout → 400 BadSignature (decoded from simulation)", r.status === 400 && r.body.error === "BadSignature", JSON.stringify(r.body));
+  }
+  {
+    const other = privateKeyToAccount(generatePrivateKey()).address;
+    const r = await postClaim(D, privateKeyToAccount(generatePrivateKey()).address, 0, { device: devX, ip: ipX, signFor: other, relayerField: other });
+    check("body names another relayer → 409 WrongRelayer, with ours in the reply", r.status === 409 && r.body.error === "WrongRelayer" && r.body.relayer === relayer, JSON.stringify(r.body));
+    const r0 = await postClaim(D, privateKeyToAccount(generatePrivateKey()).address, 0, { device: devX, ip: ipX, signFor: ZERO, relayerField: ZERO });
+    check("claim signed for anyone (relayer 0) → 409 WrongRelayer", r0.status === 409 && r0.body.error === "WrongRelayer", JSON.stringify(r0.body));
+    const r2 = await postClaim(D, privateKeyToAccount(generatePrivateKey()).address, 0, { device: devX, ip: ipX, signFor: other, relayerField: null });
+    check("signed for another relayer, body silent → 400 BadSignature (the relayer argument is signed)", r2.status === 400 && r2.body.error === "BadSignature", JSON.stringify(r2.body));
   }
   {
     const r = await postClaim(D, privateKeyToAccount(generatePrivateKey()).address, 0, { device: devX, ip: ipX, envPatch: { MAX_FEE_PER_GAS_WEI: "1000" } });
@@ -492,7 +551,7 @@ async function directSuite() {
   {
     const someone = privateKeyToAccount(generatePrivateKey()).address;
     const sig = await signClaim(B.linkKey, B.id, someone, 0);
-    const good = { chainId: CHAIN_ID, packetId: B.id.toString(), recipient: someone, payout: 0, keySig: sig };
+    const good = { chainId: CHAIN_ID, packetId: B.id.toString(), recipient: someone, payout: 0, keySig: sig, relayer, device: freshDevice() };
     const cases: [string, Parameters<typeof api>[1], number, string][] = [
       ["cross-origin POST → 403", { body: good, headers: { origin: "https://evil.example" } }, 403, "Forbidden"],
       ["sec-fetch-site cross-site → 403", { body: good, headers: { origin: null, "sec-fetch-site": "cross-site" } }, 403, "Forbidden"],
@@ -504,7 +563,15 @@ async function directSuite() {
       ["short signature → 400", { body: { ...good, keySig: "0x1234" } }, 400, "BadRequest"],
       ["unsupported chain → 400", { body: { ...good, chainId: 1 } }, 400, "UnsupportedChain"],
       ["mainnet not enabled → 503", { body: { ...good, chainId: 31612 } }, 503, "ChainDisabled"],
-      ["recipient = Hongbao → 400", { body: { ...good, recipient: HONGBAO } }, 400, "BadRequest"],
+      ...protocolAddresses(CHAIN_ID, HONGBAO).map(
+        (a, i): [string, Parameters<typeof api>[1], number, string] => [
+          `recipient = ${["Hongbao", "sMUSD", "sMUSD gauge", "MUSD", "BTC"][i]} → 400 BadRecipient`,
+          { body: { ...good, recipient: a } },
+          400,
+          "BadRecipient",
+        ],
+      ),
+      ["bad relayer field → 400", { body: { ...good, relayer: "0x1234" } }, 400, "BadRequest"],
       ["GET /api/claim → 405", { method: "GET" }, 405, "MethodNotAllowed"],
       ["OPTIONS preflight → 403", { method: "OPTIONS", headers: { origin: "https://evil.example", "access-control-request-method": "POST" } }, 403, "Forbidden"],
     ];
@@ -516,15 +583,37 @@ async function directSuite() {
   {
     const patch = { LIMIT_IP_PER_HOUR: "1" };
     const ip = freshIp();
-    const r1 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 1, { ip, device: null, envPatch: patch });
+    const r1 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 1, { ip, envPatch: patch });
     if (r1.status === 200) await pub.waitForTransactionReceipt({ hash: r1.body.txHash });
-    const r2 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 1, { ip, device: null, envPatch: patch });
-    check("open packet relays without device; IP hourly cap → 429 ip-per-hour", r1.status === 200 && r1.body.attested === false && r2.status === 429 && r2.body.limit === "ip-per-hour", `${r1.status} then ${r2.status} ${r2.body?.limit ?? ""}`);
-    const r3 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 2, { device: null });
+    const r2 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 1, { ip, envPatch: patch });
+    check("open packet relays (no attestation); IP hourly cap → 429 ip-per-hour", r1.status === 200 && r1.body.attested === false && r2.status === 429 && r2.body.limit === "ip-per-hour", `${r1.status} then ${r2.status} ${r2.body?.limit ?? ""}`);
+    const r3 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 2);
     if (r3.status === 200) await pub.waitForTransactionReceipt({ hash: r3.body.txHash });
     check("other IP claims the last share of B", r3.status === 200, `${r3.status}`);
-    const r4 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 2, { device: null });
+    const r4 = await postClaim(B, privateKeyToAccount(generatePrivateKey()).address, 2);
     check("empty packet → 410 PacketClosed", r4.status === 410 && r4.body.error === "PacketClosed", JSON.stringify(r4.body));
+  }
+
+  section("relay tip must cover gas (TipTooLow)");
+  {
+    const T0 = await createPacket({ amount: "0.1", shares: 1, attester: ZERO, ttl: 3600, drip: 0n, tip: 0n });
+    const T1 = await createPacket({ amount: "0.1", shares: 1, attester: ZERO, ttl: 3600, drip: 0n, tip: 1n });
+    const nonce0 = await pub.getTransactionCount({ address: relayer });
+    const r0 = await postClaim(T0, privateKeyToAccount(generatePrivateKey()).address, 1);
+    check("packet with no tip → 422 TipTooLow", r0.status === 422 && r0.body.error === "TipTooLow", JSON.stringify(r0.body));
+    const dev = freshDevice();
+    const ip = freshIp();
+    const r1 = await postClaim(T1, privateKeyToAccount(generatePrivateKey()).address, 1, { device: dev, ip });
+    const gasPrice = await pub.getGasPrice();
+    check(
+      "tip below estimated gas × gas price × 1.2 → 422 TipTooLow",
+      r1.status === 422 && r1.body.error === "TipTooLow" && BigInt(r1.body.needed ?? 0) > 1n,
+      `${r1.status} ${r1.body?.error} needed ${r1.body?.needed} wei at gas price ${gasPrice}`,
+    );
+    const pk = (await pub.readContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "getPacket", args: [T1.id] })) as { sharesLeft: number };
+    check("nothing was sent for either refusal", pk.sharesLeft === 1 && (await pub.getTransactionCount({ address: relayer })) === nonce0);
+    const r2 = await postClaim(T1, privateKeyToAccount(generatePrivateKey()).address, 1, { device: dev, ip });
+    check("the refused attempt released its limit slot (same device → TipTooLow again, not 429)", r2.status === 422 && r2.body.error === "TipTooLow", JSON.stringify(r2.body));
   }
 
   section("concurrent claims (nonce handling)");
@@ -581,10 +670,10 @@ async function directSuite() {
     const s = r.body?.stats ?? {};
     const onchain = (await pub.readContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "stats" })) as readonly bigint[];
     check("stats() mirrored", s.packets === onchain[0].toString() && s.claims === onchain[1].toString() && s.open === onchain[5].toString(), `packets ${s.packets}, claims ${s.claims}, recipients ${s.recipients}`);
-    check("5 packets, 8 claims on this fork", s.packets === "5" && s.claims === "8");
+    check("7 packets, 8 claims on this fork", s.packets === "7" && s.claims === "8");
     const txs = new Set((r.body?.recent?.claimed ?? []).map((c: { txHash: string }) => c.txHash));
     check("recent Claimed events include our relayed txs", lastRecipients.every((l) => txs.has(l.tx)), `${txs.size} recent claims`);
-    check("recent PacketCreated events carry messages", (r.body?.recent?.created ?? []).length === 5 && r.body.recent.created.every((c: { message: string }) => c.message === MESSAGE));
+    check("recent PacketCreated events carry messages", (r.body?.recent?.created ?? []).length === 7 && r.body.recent.created.every((c: { message: string }) => c.message === MESSAGE));
     check("recent Refunded events", (r.body?.recent?.refunded ?? []).length === 1);
     check("cache-control max-age=30", (r.headers.get("cache-control") ?? "").includes("max-age=30"));
   }
@@ -594,7 +683,7 @@ async function directSuite() {
     const finish = await pub.readContract({ address: M.gauge, abi: gaugeAbi, functionName: "periodFinish" });
     await test.increaseTime({ seconds: 700 });
     await test.mine({ blocks: 1 });
-    const r = await postClaim(E, privateKeyToAccount(generatePrivateKey()).address, 0, { device: null });
+    const r = await postClaim(E, privateKeyToAccount(generatePrivateKey()).address, 0);
     check("claim after expiry → 410 Expired", r.status === 410 && r.body.error === "Expired", JSON.stringify(r.body));
     const musdBefore = await bal(M.musd, sender.address);
     const hash = await walletFor(stranger).writeContract({ address: HONGBAO, abi: hongbaoAbi, functionName: "refund", args: [E.id] });
@@ -637,6 +726,16 @@ async function httpSuite() {
   {
     const r = await api("/api/claim", { body: { chainId: CHAIN_ID }, headers: { origin: "https://evil.example" } });
     check("cross-origin via HTTP → 403, no CORS headers", r.status === 403 && !r.headers.get("access-control-allow-origin"));
+  }
+  {
+    const r = await postClaim(F, M.gauge, 0);
+    check("recipient = sMUSD gauge via HTTP → 400 BadRecipient", r.status === 400 && r.body.error === "BadRecipient", JSON.stringify(r.body));
+    const other = privateKeyToAccount(generatePrivateKey()).address;
+    const w = await postClaim(F, privateKeyToAccount(generatePrivateKey()).address, 0, { signFor: other, relayerField: other });
+    check("another relayer via HTTP → 409 WrongRelayer", w.status === 409 && w.body.error === "WrongRelayer", JSON.stringify(w.body));
+    const T = await createPacket({ amount: "0.1", shares: 1, attester: ZERO, ttl: 3600, drip: 0n, tip: 1n });
+    const t = await postClaim(T, privateKeyToAccount(generatePrivateKey()).address, 1);
+    check("1-wei tip via HTTP → 422 TipTooLow (gas price read in workerd)", t.status === 422 && t.body.error === "TipTooLow", JSON.stringify(t.body));
   }
   {
     const r = await api(`/api/packet?chainId=${CHAIN_ID}&id=${F.id}`);

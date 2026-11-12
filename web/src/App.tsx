@@ -23,7 +23,7 @@ function NotFound() {
 export function App() {
   const { t, toggle, lang } = useI18n();
   const { pathname } = useLocation();
-  const wide = pathname === '/' || pathname === '/ledger';
+  const wide = pathname === '/' || pathname === '/ledger' || pathname === '/send';
 
   useEffect(() => {
     window.scrollTo(0, 0);

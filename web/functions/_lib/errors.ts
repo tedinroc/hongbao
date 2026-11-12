@@ -24,6 +24,11 @@ const MESSAGES: Record<string, string> = {
   BadSignature: "The link signature does not match this packet. Check that the whole link was copied.",
   AttestationExpired: "The approval for this claim timed out. Please try again.",
   ZeroAddress: "The receiving address is empty.",
+  BadRecipient: "A red packet cannot be paid to a Hongbao or Mezo token contract. Use a wallet address.",
+  WrongRelayer: "This claim was signed for a different claim service. Reload the page and try again.",
+  OverSenderCap: "This sender already has the most MUSD allowed in open red packets.",
+  OracleUnavailable: "The BTC price feed is unavailable right now. Pay with MUSD or try again shortly.",
+  NotPendingGuardian: "Only the proposed guardian can accept the role.",
   Paused: "New red packets are paused.",
   ReentrancyGuardReentrantCall: "The contract refused a re-entrant call.",
   // Relayer errors
@@ -37,11 +42,12 @@ const MESSAGES: Record<string, string> = {
   RelayerNotConfigured: "Free claiming is not available on this network right now.",
   AttesterNotConfigured: "One-per-person approval is not available right now.",
   ForeignAttester: "This red packet needs approval from a service other than this site.",
-  DeviceRequired: "This red packet allows one claim per person; the device id is missing.",
+  DeviceRequired: "The device id is missing. Each phone can open a red packet once; reload the page and try again.",
   RateLimited: "Too many claims from this device or network. Please try again later.",
   RelayerOutOfGas: "The free-claim service is out of BTC for gas right now. Please try again later.",
   GasPriceTooHigh: "Network fees are unusually high right now. Please try again later.",
   GasLimitTooHigh: "This claim needs more gas than the relayer allows.",
+  TipTooLow: "This red packet's relay tip does not cover the network fee, so the free-claim service cannot send it.",
   SimulationReverted: "The claim would fail on chain.",
   SendFailed: "The network did not accept the claim transaction. Please try again.",
   RpcError: "The Mezo network did not respond. Please try again.",
@@ -57,6 +63,8 @@ const REVERT_STATUS: Record<string, number> = {
   BadSignature: 400,
   AttestationExpired: 409,
   ZeroAddress: 400,
+  BadRecipient: 400,
+  WrongRelayer: 409,
 };
 
 export interface DecodedRevert {

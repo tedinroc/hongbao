@@ -32,10 +32,12 @@ export interface ApiClaimRequest {
   recipient: Address;
   /** 0 Stake, 1 Save, 2 Cash */
   payout: 0 | 1 | 2;
-  /** EIP-712 Claim(packetId, recipient, payout) signed by the link key */
+  /** EIP-712 Claim(packetId, recipient, payout, relayer) signed by the link key, relayer = ApiChainConfig.relayer */
   keySig: Hex;
-  /** random per-browser id (8-64 chars [A-Za-z0-9_-]); required for one-per-person packets */
-  device?: string;
+  /** random per-browser id (8-64 chars [A-Za-z0-9_-]); required (one claim per device per packet) */
+  device: string;
+  /** the relayer address the claim was signed for; when sent it must equal ApiChainConfig.relayer (else WrongRelayer) */
+  relayer?: Address;
 }
 
 /** POST /api/claim 200 */

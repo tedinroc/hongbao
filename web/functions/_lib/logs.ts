@@ -153,7 +153,7 @@ export async function recentEvents(
 
 const createdMemo = new Memo<CreatedEvent>(2000);
 
-const MAX_DURATION = 30n * 86_400n; // Hongbao.MAX_DURATION
+const MAX_DURATION = 7n * 86_400n; // Hongbao.MAX_DURATION (v2)
 const MIN_DURATION = 600n; // Hongbao.MIN_DURATION
 const DEFAULT_TTL = 86_400n; // the web app's default expiry
 const MAX_WINDOWS = 72n; // ~30 days of 3.8-4.2 s Mezo blocks
@@ -162,7 +162,7 @@ const MAX_WINDOWS = 72n; // ~30 days of 3.8-4.2 s Mezo blocks
  * The PacketCreated event for one packet (message, funding, tx). Immutable, so
  * memoised per isolate.
  *
- * The packet's expiry bounds when it was created (expiry - 30 d .. expiry - 10 min).
+ * The packet's expiry bounds when it was created (expiry - 7 d .. expiry - 10 min).
  * Blocks are located from the chain's measured block time, and the 10k-block
  * windows are read 4 at a time, nearest first to "created 24 h before expiry"
  * (the web app's default), so the usual lookup is a single round of requests.

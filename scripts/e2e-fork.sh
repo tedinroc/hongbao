@@ -55,10 +55,13 @@ wait_for() { # url-check-command, seconds
 PORT="$(free_port)"
 RPC="http://127.0.0.1:$PORT"
 echo "== starting anvil fork of $FORK_URL on $RPC"
-# Note: anvil always suggests a >= 1 gwei priority fee (real Mezo: ~16 wei testnet,
-# ~0.00016 gwei mainnet), so the tests raise the relayer's MAX_FEE_PER_GAS_WEI cap to 5 gwei.
+# Gas price: --disable-min-priority-fee makes eth_gasPrice report the fork's base fee
+# (~1e2 wei, like real Mezo testnet's 146 wei), which the relayer's TipTooLow check
+# (tip >= estimated gas x gas price x 1.2) reads. eth_maxPriorityFeePerGas still
+# suggests 1 gwei (real Mezo: ~16 wei testnet, ~1.6e5 wei mainnet), so the relayer
+# pays more than on Mezo and the tests raise its MAX_FEE_PER_GAS_WEI cap to 5 gwei.
 anvil --fork-url "$FORK_URL" --chain-id 31611 --host 127.0.0.1 --port "$PORT" \
-  --mnemonic "$MNEMONIC" --silent >"$WORK/anvil.log" 2>&1 &
+  --mnemonic "$MNEMONIC" --disable-min-priority-fee --silent >"$WORK/anvil.log" 2>&1 &
 ANVIL_PID=$!
 wait_for "cast chain-id --rpc-url $RPC" 90 || { echo "anvil did not start"; cat "$WORK/anvil.log"; exit 1; }
 echo "   fork block $(cast block-number --rpc-url "$RPC"), chain id $(cast chain-id --rpc-url "$RPC")"

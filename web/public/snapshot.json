@@ -1,14 +1,157 @@
 {
   "version": 1,
-  "generatedAt": null,
+  "generatedAt": "2026-11-12T08:37:04.699Z",
   "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
   "chains": {
     "31611": {
-      "stats": { "packets": "0", "claims": "0", "volume": "0", "recipients": "0", "senders": "0", "open": "0" },
-      "recent": []
+      "stats": {
+        "packets": "4",
+        "claims": "5",
+        "volume": "114534772702643733072",
+        "recipients": "4",
+        "senders": "1",
+        "open": "59400000000000000000"
+      },
+      "recent": {
+        "created": [
+          {
+            "id": "4",
+            "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "net": "39600000000000000000",
+            "fee": "400000000000000000",
+            "shares": 20,
+            "expiry": 1794730006,
+            "funding": "MUSD",
+            "claimKey": "0x38F02b580A8BeB37C589cC69c5c5a3A447cCF482",
+            "attester": "0x5c0028890610513Fde47EC05d0336a1fD9ADD04d",
+            "message": "恭喜發財! Try Hongbao on Mezo testnet",
+            "blockNumber": 16730335,
+            "txHash": "0xdb8732327c61a15fe9fe95dca1afeffd7f147a6cf63463cdb2cb0210ec69bcc2",
+            "timestamp": 0
+          },
+          {
+            "id": "3",
+            "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "net": "15534772702643733072",
+            "fee": "156916895986300334",
+            "shares": 2,
+            "expiry": 1794556806,
+            "funding": "BTC",
+            "claimKey": "0xb9845af2a790121c4aF30b98d1253a2cAaff78B2",
+            "attester": "0x0000000000000000000000000000000000000000",
+            "message": "BTC-funded path check",
+            "blockNumber": 16730244,
+            "txHash": "0xe4ea1f61eecab228af326865cb7a6d47809256e09d1eaba1e96e5c853a8af345",
+            "timestamp": 0
+          },
+          {
+            "id": "2",
+            "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "net": "29700000000000000000",
+            "fee": "300000000000000000",
+            "shares": 3,
+            "expiry": 1794556806,
+            "funding": "MUSD",
+            "claimKey": "0xda52C29c3C18996DfeEe3aee07857A77d60C02Ea",
+            "attester": "0x0000000000000000000000000000000000000000",
+            "message": "恭喜發財 · testnet path check",
+            "blockNumber": 16730242,
+            "txHash": "0x0683ed3bfd18a943a1ca31b958b9cbbb32a3570f0eac5a856b390d57e2c048fe",
+            "timestamp": 0
+          },
+          {
+            "id": "1",
+            "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "net": "29700000000000000000",
+            "fee": "300000000000000000",
+            "shares": 3,
+            "expiry": 1794556783,
+            "funding": "MUSD",
+            "claimKey": "0xda52C29c3C18996DfeEe3aee07857A77d60C02Ea",
+            "attester": "0x0000000000000000000000000000000000000000",
+            "message": "恭喜發財 · testnet path check",
+            "blockNumber": 16730237,
+            "txHash": "0xd740a52bdae824f0fd7c3e0d7408c6a2b5f8c50e5175df3a80ae3042bebb4a81",
+            "timestamp": 0
+          }
+        ],
+        "claimed": [
+          {
+            "id": "1",
+            "recipient": "0x023CeAc4f5db03F2402dA5Eaa0f3E5288ABf7f39",
+            "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "amount": "9900000000000000000",
+            "payout": "Stake",
+            "blockNumber": 16730307,
+            "txHash": "0xffef93fb13ba38adf17e2ff5e406ebbfb50efa9a95b92bd4adfafed18476406e",
+            "timestamp": 0
+          },
+          {
+            "id": "3",
+            "recipient": "0x825eC0b18883d6349De211Ab46403Ba0E185488e",
+            "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "amount": "7767386351321866536",
+            "payout": "Stake",
+            "blockNumber": 16730259,
+            "txHash": "0x02a6b5bfc884a99d7e1b69e4e7310932b09a1b285e5cbdd1ffe0ce5f40161352",
+            "timestamp": 0
+          },
+          {
+            "id": "2",
+            "recipient": "0xC2fF27FFDB61e572B6b5c50c9E721F099F1e04b2",
+            "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "amount": "9900000000000000000",
+            "payout": "Cash",
+            "blockNumber": 16730254,
+            "txHash": "0x36ef7ae79b7a642e08f713a9220553a71cd91d1c540803787f8684c3c85cbbaf",
+            "timestamp": 0
+          },
+          {
+            "id": "2",
+            "recipient": "0x87B50aB9EAfEAa1f7BF45727062d331386d9746b",
+            "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "amount": "9900000000000000000",
+            "payout": "Save",
+            "blockNumber": 16730251,
+            "txHash": "0x8319785afa26c1b636c17992b99d3e8e877e4210831b92ec066c700519874bc0",
+            "timestamp": 0
+          },
+          {
+            "id": "2",
+            "recipient": "0x825eC0b18883d6349De211Ab46403Ba0E185488e",
+            "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "amount": "9900000000000000000",
+            "payout": "Stake",
+            "blockNumber": 16730249,
+            "txHash": "0x07fd18c90055512dfe568f7287af9759fd43ed0e9f2c8743103039b3847bf892",
+            "timestamp": 0
+          }
+        ],
+        "refunded": [
+          {
+            "id": "3",
+            "to": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "amount": "7767386351321866536",
+            "btcReturned": "4000000000000",
+            "inKind": false,
+            "blockNumber": 16730275,
+            "txHash": "0x944bf6339b6bc7743b7a63f6ff729faf1eb6cc0b1553fe49350a5d88660ccbf9",
+            "timestamp": 0
+          }
+        ],
+        "fromBlock": 16730213,
+        "toBlock": 16730765
+      }
     },
     "31612": {
-      "stats": { "packets": "0", "claims": "0", "volume": "0", "recipients": "0", "senders": "0", "open": "0" },
+      "stats": {
+        "packets": "0",
+        "claims": "0",
+        "volume": "0",
+        "recipients": "0",
+        "senders": "0",
+        "open": "0"
+      },
       "recent": []
     }
   }

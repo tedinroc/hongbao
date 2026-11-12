@@ -12,5 +12,6 @@ SCR="${TMPDIR:-/tmp}/hongbao-cfhome"; mkdir -p "$SCR"
 export HOME="$SCR" XDG_CONFIG_HOME="$HB_CF_CONFIG_DIR" npm_config_cache="$HB_NPM_CACHE" CLOUDFLARE_ACCOUNT_ID
 cd "$ROOT/web"
 npx wrangler whoami 2>/dev/null | grep -q "$HB_CF_EXPECT_EMAIL" || { echo "wrong Cloudflare account"; exit 1; }
+node "$ROOT/ops/snapshot.mjs" || echo "snapshot refresh skipped"
 npm run build
 npx wrangler pages deploy dist --project-name hongbao-mezo --branch "${BRANCH:-main}" --commit-dirty=true

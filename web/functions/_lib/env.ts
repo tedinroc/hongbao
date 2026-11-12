@@ -22,7 +22,7 @@ export interface Env {
   DEPLOY_BLOCK_31612?: string;
   /** Extra origins allowed to POST (comma-separated), e.g. a local Vite dev server. Same-origin is always allowed. */
   ALLOWED_ORIGINS?: string;
-  /** Rate limits for one-per-person packets (defaults from SPEC.md). */
+  /** Claim rate limits on every packet (defaults from SPEC.md: device 1 per packet, IP 5 per packet, IP 20 per hour). */
   LIMIT_DEVICE_PER_PACKET?: string;
   LIMIT_IP_PER_PACKET?: string;
   LIMIT_IP_PER_HOUR?: string;
