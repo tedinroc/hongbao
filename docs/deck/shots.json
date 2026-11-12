@@ -1,45 +1,79 @@
 {
-  "note": "Phone screenshots used by the deck. Each output is 780 px wide, made by stacking crops (y < 0 counts from the bottom of the source); a sticky header (top 120 px) or bottom navigation (last 128 px) is stacked back on where a scrolled phone would show it. The three slide-3 phones are all 1664 px tall. Sources are relative to the repo root; ops/screens is not committed, so when a source is missing build.mjs keeps the committed img/ file.",
+  "note": "Phone screenshots used by the deck. Each output is 780 px wide, made by stacking crops (y < 0 counts from the bottom of the source); a sticky header (top 120 px) or bottom navigation (last 128 px) is stacked back on where a scrolled phone would show it. The three slide-3 phones are all 1664 px tall. Sources are relative to the repo root; ops/screens (including ops/screens/live, frames from the live-testnet recordings) is not committed, so when a source is missing build.mjs keeps the committed img/ file.",
   "width": 780,
   "quality": 0.86,
   "shots": [
     {
       "out": "img/cover-opened-zh.jpg",
       "what": "Opened packet in Traditional Chinese: the share is in, staked in Mezo's gauge",
-      "layers": [{ "src": "ops/screens/after/phone-light-zh--claim-after-fold.png" }]
+      "layers": [
+        {
+          "src": "ops/screens/after/phone-light-zh--claim-after-fold.png"
+        }
+      ]
     },
     {
       "out": "img/send.jpg",
-      "what": "Send form scrolled to the amount: pay with MUSD or BTC, total, shares, message, open time",
+      "what": "Send form on live Mezo testnet: team video wallet, pay with MUSD, BTC or a Mezo loan, total, shares, message",
       "layers": [
-        { "src": "ops/screens/after/phone-light-en--send-filled.png", "y": 0, "h": 120 },
-        { "src": "ops/screens/after/phone-light-en--send-filled.png", "y": 975, "h": 1416 },
-        { "src": "ops/screens/after/phone-light-en--send-filled.png", "y": -128, "h": 128 }
+        {
+          "src": "ops/screens/live/send.png",
+          "y": 0,
+          "h": 1536
+        },
+        {
+          "src": "ops/screens/live/send.png",
+          "y": -128,
+          "h": 128
+        }
       ]
     },
     {
       "out": "img/claim.jpg",
-      "what": "Claim screen scrolled to the three payouts (Earn MEZO, Save, Cash) and the sticky open button",
+      "what": "Claim screen on live Mezo testnet (packet #4): Earn MEZO, Save, Cash and the open button on one phone screen",
       "layers": [
-        { "src": "ops/screens/after/phone-light-en--claim-before.png", "y": 0, "h": 120 },
-        { "src": "ops/screens/after/phone-light-en--claim-before.png", "y": 758, "h": 1544 }
+        {
+          "src": "ops/screens/live/claim.png",
+          "y": 0,
+          "h": 120
+        },
+        {
+          "src": "ops/screens/live/claim.png",
+          "y": 144,
+          "h": 1544
+        }
       ]
     },
     {
       "out": "img/opened.jpg",
-      "what": "Opened packet, staked in Mezo's gauge",
+      "what": "Opened packet on live Mezo testnet (packet #5), staked in Mezo's gauge",
       "layers": [
-        { "src": "ops/screens/after/phone-light-en--claim-after-fold.png", "y": 0, "h": 1536 },
-        { "src": "ops/screens/after/phone-light-en--claim-after-fold.png", "y": -128, "h": 128 }
+        {
+          "src": "ops/screens/live/opened.png",
+          "y": 0,
+          "h": 1536
+        },
+        {
+          "src": "ops/screens/live/opened.png",
+          "y": -128,
+          "h": 128
+        }
       ]
     },
     {
       "out": "img/next.jpg",
-      "what": "Opened packet scrolled down: MEZO earned counter and next steps (sticky header and bottom navigation as on a phone)",
+      "what": "Opened packet scrolled down on live Mezo testnet: MEZO earned counter and next steps",
       "layers": [
-        { "src": "ops/screens/after/phone-light-en--claim-after-fold.png", "y": 0, "h": 120 },
-        { "src": "ops/screens/after/phone-light-en--claim-after.png", "y": 1040, "h": 1500 },
-        { "src": "ops/screens/after/phone-light-en--claim-after-fold.png", "y": -128, "h": 128 }
+        {
+          "src": "ops/screens/live/next.png",
+          "y": 0,
+          "h": 1536
+        },
+        {
+          "src": "ops/screens/live/next.png",
+          "y": -128,
+          "h": 128
+        }
       ]
     }
   ]
