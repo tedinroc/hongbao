@@ -334,7 +334,7 @@ export function Send() {
       <section className="field">
         <span className="label">{t('send.network')}</span>
         <ChainPicker value={chainId} onChange={setChainId} need="enabled" />
-        {info.testnet ? <span className="hint">{t('chain.testnetNote')}</span> : null}
+        <span className="hint">{t(info.testnet ? 'chain.testnetNote' : 'chain.mainnetNote')}</span>
       </section>
 
       <section className="card stack">

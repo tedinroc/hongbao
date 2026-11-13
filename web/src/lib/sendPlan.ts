@@ -22,8 +22,9 @@ export const GAS = {
   approve: 60_000n,
   /** create / createWithPermit */
   create: 450_000n,
-  /** createWithBTC (swap included) */
-  createBtc: 550_000n,
+  /** createWithBTC (swap included). A fork skips the BTC and oracle precompiles' gas; the real
+   * Mezo mainnet node estimates 712k–732k (2026-11-13), so budget above that. */
+  createBtc: 800_000n,
   /** BorrowerOperations.withdrawMUSD (about 390k on the fork) */
   borrow: 450_000n,
   /** one relayed claim, what the relay tip has to pay for (a first-time stake used 327,536 on the fork) */

@@ -1,10 +1,10 @@
 # Hongbao on-chain evidence
 
-Generated 2026-11-12T10:40:50.725Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
+Generated 2026-11-13T02:45:34.314Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
 
 ## Mezo testnet
 
-Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16732529
+Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16746260
 
 | | |
 |---|---|
@@ -42,3 +42,27 @@ Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4a
 | # | To | MUSD | In kind | Tx |
 |---|---|---|---|---|
 | 3 | [0x7B59…2c54](https://explorer.test.mezo.org/address/0x7B5903E4c4F660cd916f0531BF5eD9De03252c54) | 7.77 | no | [0x944bf633…](https://explorer.test.mezo.org/tx/0x944bf6339b6bc7743b7a63f6ff729faf1eb6cc0b1553fe49350a5d88660ccbf9) |
+
+## Mezo mainnet
+
+Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13190648
+
+| | |
+|---|---|
+| Packets | 0 (0 funded with BTC, 0 from a Mezo loan) |
+| MUSD put into packets | 0.00 |
+| Claims | 0 (staked 0, saved 0, cash 0) |
+| Refunds | 0 |
+| Distinct senders | 0 (outside: 0) |
+| Distinct recipients | 0 (outside: 0) |
+| Outside recipients who later signed their own transaction | 0 |
+
+### Packets
+
+| # | Sender | Net MUSD | Shares | Funding | Tx |
+|---|---|---|---|---|---|
+
+### Claims
+
+| # | Recipient | MUSD | Received as | Signed own tx later | Tx |
+|---|---|---|---|---|---|

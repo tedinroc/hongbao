@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-12T11:08:42.592Z",
+  "generatedAt": "2026-11-13T03:11:29.787Z",
   "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
   "chains": {
     "31611": {
@@ -165,7 +165,7 @@
           }
         ],
         "fromBlock": 16730213,
-        "toBlock": 16732925
+        "toBlock": 16746630
       }
     },
     "31612": {

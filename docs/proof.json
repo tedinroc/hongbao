@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-12T10:40:50.725Z",
+  "generatedAt": "2026-11-13T02:45:34.314Z",
   "chains": {
     "31611": {
       "summary": {
         "contract": "0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4",
         "fromBlock": 16730213,
-        "toBlock": 16732529,
+        "toBlock": 16746260,
         "packets": 5,
         "claims": 6,
         "refunds": 1,
@@ -146,6 +146,32 @@
           "tx": "0x944bf6339b6bc7743b7a63f6ff729faf1eb6cc0b1553fe49350a5d88660ccbf9"
         }
       ]
+    },
+    "31612": {
+      "summary": {
+        "contract": "0x116ca33fB361497010a5AA0f1eA5368D304728Ee",
+        "fromBlock": 13190614,
+        "toBlock": 13190648,
+        "packets": 0,
+        "claims": 0,
+        "refunds": 0,
+        "musdIntoPackets": "0.00",
+        "senders": 0,
+        "outsideSenders": 0,
+        "recipients": 0,
+        "outsideRecipients": 0,
+        "outsideRecipientsWhoSignedOwnTx": 0,
+        "claimsByPayout": {
+          "stake": 0,
+          "save": 0,
+          "cash": 0
+        },
+        "fundedWithBTC": 0,
+        "fundedFromMezoLoan": 0
+      },
+      "packets": [],
+      "claims": [],
+      "refunds": []
     }
   }
 }

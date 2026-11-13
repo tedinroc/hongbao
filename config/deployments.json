@@ -7,8 +7,8 @@
   },
   "31612": {
     "name": "Mezo mainnet",
-    "hongbao": null,
-    "deployBlock": null,
-    "enabled": false
+    "hongbao": "0x116ca33fB361497010a5AA0f1eA5368D304728Ee",
+    "deployBlock": 13190614,
+    "enabled": true
   }
 }

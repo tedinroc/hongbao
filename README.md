@@ -10,7 +10,7 @@ Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D
 | Demo video | https://youtu.be/KoJl0qOz5B4 (1:44, app footage on live Mezo testnet; also at https://hongbao-mezo.pages.dev/video/) |
 | Deck | https://hongbao-mezo.pages.dev/deck.pdf ([source](docs/deck/)) |
 | Track | Track 2: Access and distribution (Mezo Adoption) |
-| Contract | Mezo testnet [`0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4`](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4) (source verified); Mezo mainnet: capped beta, address added at launch |
+| Contract | Mezo mainnet [`0x116ca33fB361497010a5AA0f1eA5368D304728Ee`](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee) (capped beta, source verified); Mezo testnet [`0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4`](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4) (source verified) |
 | Evidence | [docs/PROOF.md](docs/PROOF.md): every packet, claim and refund with explorer links, team vs outside wallets. Every funding path (MUSD permit, BTC through Mezo's pool, a Mezo loan) and every payout (staked, saved, cash) plus a refund has a real testnet transaction |
 | Status | Entirely new, built during Wave 2 |
 
@@ -49,7 +49,7 @@ expiry ──refund──▶ unclaimed MUSD and unused gas back to the sender
 
 ## Safety
 
-- No owner can move funds. A guardian can only pause new packets, set caps below hard caps fixed at deployment (mainnet beta: 50 MUSD per packet, 100 MUSD open per sender, 500 MUSD open in total), and hand the role over in two steps.
+- No owner can move funds. A guardian can only pause new packets, set caps below hard caps fixed at deployment (mainnet beta: 50 MUSD per packet, 100 MUSD open per sender, 500 MUSD open in total; the guardian can raise them at most to 100 / 500 / 5,000), and hand the role over in two steps.
 - Every packet is refundable by its sender at any time and by anyone (to the sender) after expiry. If the savings vault ever refuses a withdrawal, refunds and cash claims fall back to paying sMUSD in kind.
 - Native BTC goes out last under a reentrancy guard; recipients that refuse BTC can pull it later.
 - Claims are bound by EIP-712 to the recipient, the payout and the relayer, so a copied transaction can neither redirect the money nor take the relay tip.
