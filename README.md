@@ -11,8 +11,8 @@ Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D
 | Deck | https://hongbao.trytry.net/deck.pdf ([source](docs/deck/)) |
 | Track | Track 2: Access and distribution (Mezo Adoption) |
 | Contract | Mezo mainnet [`0x116ca33fB361497010a5AA0f1eA5368D304728Ee`](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee) (capped beta, source verified); Mezo testnet [`0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4`](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4) (source verified) |
-| Evidence | [docs/PROOF.md](docs/PROOF.md): every packet, claim and refund with explorer links, team vs outside wallets. Every funding path (MUSD permit, BTC through Mezo's pool, a Mezo loan) and every payout (staked, saved, cash) plus a refund has a real testnet transaction |
-| Status | Entirely new, built during Wave 2 |
+| Evidence | [docs/PROOF.md](docs/PROOF.md): every packet, claim and refund with explorer links, team vs outside wallets ([config/team-wallets.json](config/team-wallets.json)). Every funding path (MUSD permit, BTC through Mezo's pool, a Mezo loan) and every payout (staked, saved, cash) plus a refund has a real testnet transaction. On mainnet, packets are funded with MUSD from MetaMask and claimed by wallets outside the team, staked in Mezo's gauge |
+| Status | Entirely new, built during Wave 2. Live on Mezo mainnet since 2026-11-13 as a capped beta |
 
 ## Why
 
@@ -54,7 +54,7 @@ expiry ──refund──▶ unclaimed MUSD and unused gas back to the sender
 - Native BTC goes out last under a reentrancy guard; recipients that refuse BTC can pull it later.
 - Claims are bound by EIP-712 to the recipient, the payout and the relayer, so a copied transaction can neither redirect the money nor take the relay tip.
 - Reviewed in three independent passes (funds and accounting, authorization, correctness against Mezo's verified sources); every confirmed finding is fixed and covered by a test. See [docs/SECURITY.md](docs/SECURITY.md).
-- Tests: `cd contracts && forge test` (28 unit, adversarial and fuzz tests, including a conservation fuzz: every MUSD is either paid out or refunded); `cd web && npm test` (107 tests); `scripts/e2e-fork.sh` runs the contract, relayer and app together on a fork of Mezo testnet.
+- Tests: `cd contracts && forge test` (28 unit, adversarial and fuzz tests, including a conservation fuzz: every MUSD is either paid out or refunded); `cd web && npm test` (116 tests); `scripts/e2e-fork.sh` runs the contract, relayer and app together on a fork of Mezo testnet.
 
 ## Repository
 
