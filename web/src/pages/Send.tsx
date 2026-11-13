@@ -190,6 +190,8 @@ export function Send() {
 
   const block: Block | null = (() => {
     if (!info.enabled) return { key: 'send.notLive' };
+    // One-per-person needs the co-signer's address; never fall back to an open packet without the sender turning it off.
+    if (onePer && !attesterCfg) return { key: cfg.error ? 'send.onePerUnavailable' : 'send.onePerWait' };
     if (ctx.data?.paused) return { key: 'send.paused' };
     if (!amount || amount <= 0n) return { key: 'send.invalid.amount' };
     if (shares < 1 || shares > 100) return { key: 'send.invalid.shares' };

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "description": "Functions run for pages, /api and /c (functions/_middleware.ts redirects page loads on the old pages.dev host). Static files skip them.",
+  "include": ["/*"],
+  "exclude": ["/assets/*", "/brand/*", "/favicon.svg", "/og.jpg", "/snapshot.json", "/video/hongbao-pitch.mp4"]
+}

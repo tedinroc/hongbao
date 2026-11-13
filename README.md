@@ -33,7 +33,7 @@ expiry ──refund──▶ unclaimed MUSD and unused gas back to the sender
 
 - The link carries a one-time key in its `#fragment`, which never reaches a server. The contract stores only the key's address and checks an EIP-712 `Claim(packetId, recipient, payout, relayer)` signature, so a signature cannot be redirected to another address, another payout or another relayer.
 - Optional one-per-person mode: the relayer co-signs an `Attest(packetId, recipient, payout, deadline)` after rate-limiting by device and IP.
-- Anyone can relay a claim; the packet's tip pays for it, so the relayer needs no subsidy.
+- The packet's tip pays the relayer's gas, so the relayer needs no subsidy. Claims on an open packet can be relayed by anyone; one-per-person claims go through the Hongbao relayer, which co-signs them.
 
 ## Mezo contracts Hongbao calls
 
