@@ -1,10 +1,10 @@
 # Hongbao on-chain evidence
 
-Generated 2026-11-13T19:06:56.907Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
+Generated 2026-11-13T20:36:30.621Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
 
 ## Mezo testnet
 
-Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16760263
+Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16761556
 
 | | |
 |---|---|
@@ -47,12 +47,12 @@ Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4a
 
 ## Mezo mainnet
 
-Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13206088
+Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13207501
 
 | | |
 |---|---|
-| Packets | 2 (0 funded with BTC, 0 from a Mezo loan) |
-| MUSD put into packets | 30.02 |
+| Packets | 3 (0 funded with BTC, 0 from a Mezo loan) |
+| MUSD put into packets | 38.81 |
 | Claims | 2 (staked 2, saved 0, cash 0) |
 | Refunds | 0 |
 | Distinct senders | 1 (outside: 0) |
@@ -65,6 +65,7 @@ Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a
 |---|---|---|---|---|---|
 | 1 | [0x7233…73d0](https://explorer.mezo.org/address/0x72331BeDebEF80983E9B4be073E9c7870F3d73d0) team | 15.01 | 15 | MUSD | [0x545eab6c…](https://explorer.mezo.org/tx/0x545eab6c0d8bc5cf1d55a21756c904031e0d7ab59a56a9405aec3bbab1b9e132) |
 | 2 | [0x7233…73d0](https://explorer.mezo.org/address/0x72331BeDebEF80983E9B4be073E9c7870F3d73d0) team | 15.01 | 15 | MUSD | [0xf98432b3…](https://explorer.mezo.org/tx/0xf98432b386bb57c4addbbd9ca65390fdfbfb1b7e285c5430a36bae125613b999) |
+| 3 | [0x7233…73d0](https://explorer.mezo.org/address/0x72331BeDebEF80983E9B4be073E9c7870F3d73d0) team | 8.79 | 8 | MUSD | [0xe0976857…](https://explorer.mezo.org/tx/0xe0976857a70bcbb58026a972eddf8ded2337d947e00b40db523fd8ef4906b53a) |
 
 ### Claims
 

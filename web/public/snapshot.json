@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-13T18:36:00.103Z",
+  "generatedAt": "2026-11-13T20:36:58.318Z",
   "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
   "chains": {
     "31611": {
@@ -190,20 +190,35 @@
           }
         ],
         "fromBlock": 16730213,
-        "toBlock": 16759815
+        "toBlock": 16761561
       }
     },
     "31612": {
       "stats": {
-        "packets": "2",
-        "claims": "1",
-        "volume": "30016800000000000000",
-        "recipients": "1",
+        "packets": "3",
+        "claims": "2",
+        "volume": "38808000000000000000",
+        "recipients": "2",
         "senders": "1",
-        "open": "29016240000000000000"
+        "open": "36806880000000000000"
       },
       "recent": {
         "created": [
+          {
+            "id": "3",
+            "sender": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
+            "net": "8791200000000000000",
+            "fee": "88800000000000000",
+            "shares": 8,
+            "expiry": 1795204894,
+            "funding": "MUSD",
+            "claimKey": "0x7E22AB782ce4ef301DcB429ece52363b3c0C0e94",
+            "attester": "0x5c0028890610513Fde47EC05d0336a1fD9ADD04d",
+            "message": "Happy Hongbao, Mezo Buildathon judges! 恭喜發財 🧧",
+            "blockNumber": 13207191,
+            "txHash": "0xe0976857a70bcbb58026a972eddf8ded2337d947e00b40db523fd8ef4906b53a",
+            "timestamp": 0
+          },
           {
             "id": "2",
             "sender": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
@@ -238,6 +253,16 @@
         "claimed": [
           {
             "id": "1",
+            "recipient": "0xBacE7AD069A84E3E881c4F3E2b301c95F6cab45F",
+            "relayer": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
+            "amount": "1000560000000000000",
+            "payout": "Stake",
+            "blockNumber": 13205880,
+            "txHash": "0x8c2ac54de4aa7bad9f12ec79bf7c8632716644bb8c4ef72881636904fc67f3cb",
+            "timestamp": 0
+          },
+          {
+            "id": "1",
             "recipient": "0x572ac141615449Dbb9495a63b30a893332510FEA",
             "relayer": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
             "amount": "1000560000000000000",
@@ -249,7 +274,7 @@
         ],
         "refunded": [],
         "fromBlock": 13190614,
-        "toBlock": 13205595
+        "toBlock": 13207506
       }
     }
   }

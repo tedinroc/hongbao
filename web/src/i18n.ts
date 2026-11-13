@@ -133,7 +133,7 @@ const en = {
   'send.onePer': 'One per person',
   'send.onePerTag': 'Recommended',
   'send.onePerOn':
-    'We co-sign each claim and allow one per phone and at most 5 per network, so one person can’t empty the packet.',
+    'We co-sign each claim and allow one per phone and at most 5 per network, so it takes real effort for one person to empty the packet.',
   'send.onePerOff':
     'Anyone with the link can claim, one share per wallet address. Someone who pays the fee from their own wallets can take several shares.',
   'send.onePerUnavailable': 'Our co-signing service did not answer. Try again in a moment, or turn this off to send a packet without a per-person limit.',
@@ -537,7 +537,7 @@ const zh: Record<MessageKey, string> = {
   'send.expiry.7d': '7 天',
   'send.onePer': '一人限領一份',
   'send.onePerTag': '建議',
-  'send.onePerOn': '我們會為每次領取加簽：每支手機只能領一份，同一個網路最多五份，避免一個人把紅包領光。',
+  'send.onePerOn': '我們會為每次領取加簽：每支手機只能領一份，同一個網路最多五份，讓一個人很難把紅包領光。',
   'send.onePerOff': '拿到連結的人都能領，每個錢包地址一份。自己用多個錢包付手續費的人可以領走好幾份。',
   'send.onePerUnavailable': '加簽服務沒有回應。請稍後再試，或關掉這個選項，改發沒有一人一份限制的紅包。',
   'send.onePerWait': '正在等加簽服務回應，等到之後這個紅包才能設定一人一份。',

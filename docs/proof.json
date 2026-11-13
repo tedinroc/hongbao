@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-13T19:06:56.907Z",
+  "generatedAt": "2026-11-13T20:36:30.621Z",
   "chains": {
     "31611": {
       "summary": {
         "contract": "0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4",
         "fromBlock": 16730213,
-        "toBlock": 16760263,
+        "toBlock": 16761556,
         "packets": 6,
         "claims": 7,
         "refunds": 1,
@@ -171,11 +171,11 @@
       "summary": {
         "contract": "0x116ca33fB361497010a5AA0f1eA5368D304728Ee",
         "fromBlock": 13190614,
-        "toBlock": 13206088,
-        "packets": 2,
+        "toBlock": 13207501,
+        "packets": 3,
         "claims": 2,
         "refunds": 0,
-        "musdIntoPackets": "30.02",
+        "musdIntoPackets": "38.81",
         "senders": 1,
         "outsideSenders": 0,
         "recipients": 2,
@@ -209,6 +209,16 @@
           "funding": "MUSD",
           "loanTx": null,
           "tx": "0xf98432b386bb57c4addbbd9ca65390fdfbfb1b7e285c5430a36bae125613b999"
+        },
+        {
+          "id": "3",
+          "sender": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
+          "tag": "team",
+          "net": "8.79",
+          "shares": 8,
+          "funding": "MUSD",
+          "loanTx": null,
+          "tx": "0xe0976857a70bcbb58026a972eddf8ded2337d947e00b40db523fd8ef4906b53a"
         }
       ],
       "claims": [
