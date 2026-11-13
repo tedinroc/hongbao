@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-13T18:35:19.016Z",
+  "generatedAt": "2026-11-13T19:06:56.907Z",
   "chains": {
     "31611": {
       "summary": {
         "contract": "0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4",
         "fromBlock": 16730213,
-        "toBlock": 16759806,
+        "toBlock": 16760263,
         "packets": 6,
         "claims": 7,
         "refunds": 1,
@@ -171,18 +171,18 @@
       "summary": {
         "contract": "0x116ca33fB361497010a5AA0f1eA5368D304728Ee",
         "fromBlock": 13190614,
-        "toBlock": 13205586,
+        "toBlock": 13206088,
         "packets": 2,
-        "claims": 1,
+        "claims": 2,
         "refunds": 0,
         "musdIntoPackets": "30.02",
         "senders": 1,
         "outsideSenders": 0,
-        "recipients": 1,
-        "outsideRecipients": 1,
+        "recipients": 2,
+        "outsideRecipients": 2,
         "outsideRecipientsWhoSignedOwnTx": 0,
         "claimsByPayout": {
-          "stake": 1,
+          "stake": 2,
           "save": 0,
           "cash": 0
         },
@@ -221,6 +221,16 @@
           "payout": "Earn MEZO (staked)",
           "signedOwnTx": false,
           "tx": "0x15e18226f084c4da4800b0df9ab6c658f1dfff435d8bde14afa2692bdafb62fd"
+        },
+        {
+          "id": "1",
+          "recipient": "0xBacE7AD069A84E3E881c4F3E2b301c95F6cab45F",
+          "tag": "outside",
+          "relayer": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
+          "amount": "1.00",
+          "payout": "Earn MEZO (staked)",
+          "signedOwnTx": false,
+          "tx": "0x8c2ac54de4aa7bad9f12ec79bf7c8632716644bb8c4ef72881636904fc67f3cb"
         }
       ],
       "refunds": []
