@@ -6,9 +6,9 @@ Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D
 
 | | |
 |---|---|
-| Live app | https://hongbao-mezo.pages.dev (no wallet needed to open or claim) |
-| Demo video | https://youtu.be/KoJl0qOz5B4 (1:44, app footage on live Mezo testnet; also at https://hongbao-mezo.pages.dev/video/) |
-| Deck | https://hongbao-mezo.pages.dev/deck.pdf ([source](docs/deck/)) |
+| Live app | https://hongbao.trytry.net (no wallet needed to open or claim). https://hongbao-mezo.pages.dev serves the same build, but MetaMask warns on every `*.pages.dev` site when you connect, so connect a wallet on hongbao.trytry.net |
+| Demo video | https://youtu.be/KoJl0qOz5B4 (1:44, app footage on live Mezo testnet; also at https://hongbao.trytry.net/video/) |
+| Deck | https://hongbao.trytry.net/deck.pdf ([source](docs/deck/)) |
 | Track | Track 2: Access and distribution (Mezo Adoption) |
 | Contract | Mezo mainnet [`0x116ca33fB361497010a5AA0f1eA5368D304728Ee`](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee) (capped beta, source verified); Mezo testnet [`0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4`](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4) (source verified) |
 | Evidence | [docs/PROOF.md](docs/PROOF.md): every packet, claim and refund with explorer links, team vs outside wallets. Every funding path (MUSD permit, BTC through Mezo's pool, a Mezo loan) and every payout (staked, saved, cash) plus a refund has a real testnet transaction |

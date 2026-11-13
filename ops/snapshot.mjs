@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // Refresh web/public/snapshot.json from the live /api/stats endpoint before a deploy, so the
 // landing page shows real numbers on first paint. Chains that fail keep their previous entry.
-//   node ops/snapshot.mjs [baseUrl]   (default https://hongbao-mezo.pages.dev)
+//   node ops/snapshot.mjs [baseUrl]   (default https://hongbao.trytry.net)
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FILE = join(ROOT, "web/public/snapshot.json");
-const BASE = process.argv[2] || "https://hongbao-mezo.pages.dev";
+const BASE = process.argv[2] || "https://hongbao.trytry.net";
 const snap = JSON.parse(readFileSync(FILE, "utf8"));
 const deployments = JSON.parse(readFileSync(join(ROOT, "config/deployments.json"), "utf8"));
 

@@ -71,5 +71,5 @@ if [ "${2:-}" != "--no-deploy" ]; then
   echo "== site"
   bash "$ROOT/ops/deploy-site.sh" 2>&1 | grep -E "Deployment complete|rror" || true
   sleep 5
-  curl -s https://hongbao-mezo.pages.dev/api/config | python3 -I -c "import json,sys;c=json.load(sys.stdin)['chains']['31612'];print('  live config 31612:', c['hongbao'], 'enabled' if c['enabled'] else 'DISABLED')"
+  curl -s https://hongbao.trytry.net/api/config | python3 -I -c "import json,sys;c=json.load(sys.stdin)['chains']['31612'];print('  live config 31612:', c['hongbao'], 'enabled' if c['enabled'] else 'DISABLED')"
 fi

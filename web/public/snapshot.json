@@ -1,19 +1,34 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-13T03:11:29.787Z",
+  "generatedAt": "2026-11-13T13:49:01.757Z",
   "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
   "chains": {
     "31611": {
       "stats": {
-        "packets": "5",
-        "claims": "6",
-        "volume": "126414772702643733072",
-        "recipients": "5",
+        "packets": "6",
+        "claims": "7",
+        "volume": "128394772702643733072",
+        "recipients": "6",
         "senders": "2",
-        "open": "70092000000000000000"
+        "open": "71082000000000000000"
       },
       "recent": {
         "created": [
+          {
+            "id": "6",
+            "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "net": "1980000000000000000",
+            "fee": "20000000000000000",
+            "shares": 2,
+            "expiry": 1794588336,
+            "funding": "MUSD",
+            "claimKey": "0x2a7bcB9d615A9D7EF59B2A2D1F93e7D39d995936",
+            "attester": "0x5c0028890610513Fde47EC05d0336a1fD9ADD04d",
+            "message": "hongbao.trytry.net domain check",
+            "blockNumber": 16755661,
+            "txHash": "0xaf2e1efb74a663d6bb10832f84384ecc55540248c3c5c14ac55cf8f1b19073fc",
+            "timestamp": 0
+          },
           {
             "id": "5",
             "sender": "0x9bfD25e1658923804EBFE471993Bba7Bbf0E23CA",
@@ -92,6 +107,16 @@
         ],
         "claimed": [
           {
+            "id": "6",
+            "recipient": "0xE19abfdFE2f1Cbe3EC763C8e8dffD2A199a3047C",
+            "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+            "amount": "990000000000000000",
+            "payout": "Stake",
+            "blockNumber": 16755678,
+            "txHash": "0xf1df9ef879f669ea4afdcc5861efacc536c0e16fbaa92431d2b31b0e3da430c0",
+            "timestamp": 0
+          },
+          {
             "id": "5",
             "recipient": "0xDbfB12E7b9F94723828C4bc66CB3D06B306dCB4E",
             "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
@@ -165,7 +190,7 @@
           }
         ],
         "fromBlock": 16730213,
-        "toBlock": 16746630
+        "toBlock": 16755704
       }
     },
     "31612": {
@@ -177,7 +202,13 @@
         "senders": "0",
         "open": "0"
       },
-      "recent": []
+      "recent": {
+        "created": [],
+        "claimed": [],
+        "refunded": [],
+        "fromBlock": 13190614,
+        "toBlock": 13201058
+      }
     }
   }
 }

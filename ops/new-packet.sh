@@ -15,7 +15,7 @@ SHARES="${1:?shares}"; TOTAL="${2:?musd total}"; HOURS="${3:?hours open}"; MSG="
 RPC=https://rpc.test.mezo.org
 MUSD=0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503
 HB="$(python3 -I -c "import json,sys;print(json.load(open(sys.argv[1]))['31611']['hongbao'])" "$ROOT/config/deployments.json")"
-ATTESTER="$(curl -sf https://hongbao-mezo.pages.dev/api/config | python3 -I -c "import json,sys;print(json.load(sys.stdin)['chains']['31611']['attester'])")"
+ATTESTER="$(curl -sf https://hongbao.trytry.net/api/config | python3 -I -c "import json,sys;print(json.load(sys.stdin)['chains']['31611']['attester'])")"
 [ "$MODE" = open ] && ATTESTER=0x0000000000000000000000000000000000000000
 key() { python3 -I -c "import json,sys;d=json.load(open(sys.argv[1]));d=d.get('data',d);d=d[0] if isinstance(d,list) else d;print(d['private_key'])" "$1"; }
 PK="$(key "$ROOT/.secrets/testnet-deployer.json")"
@@ -39,7 +39,7 @@ TX="$(cast send "$HB" 'create(uint256,(uint32,uint64,address,address,uint96,uint
 unset PK
 [ "$TX" = FAILED ] && { echo "create failed"; exit 1; }
 ID="$(cast call "$HB" 'packetCount()(uint256)' --rpc-url $RPC | awk '{print $1}')"
-LINK="https://hongbao-mezo.pages.dev/c/31611/$ID#k=$LK_PK&c=$HB"
+LINK="https://hongbao.trytry.net/c/31611/$ID#k=$LK_PK&c=$HB"
 unset LK_PK
 mkdir -p "$ROOT/private"
 printf -- '- %s packet %s (testnet, %s × ~%s MUSD, %s, open %sh, "%s", tx %s): %s\n' "$(TZ=Asia/Taipei date '+%F %H:%M')" "$ID" "$SHARES" \

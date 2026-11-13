@@ -26,7 +26,7 @@ const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(n);
 const opt = (n, d) => { const i = argv.indexOf(n); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
 
-const SITE = opt('--site', 'https://hongbao-mezo.pages.dev').replace(/\/$/, '');
+const SITE = opt('--site', 'https://hongbao.trytry.net').replace(/\/$/, '');
 const OUT_HTML = join(DECK, 'Hongbao-deck.html');
 const OUT_PDF = join(ROOT, 'docs', 'Hongbao-deck.pdf');
 const PNG_DIR = opt('--png', null);
