@@ -175,13 +175,16 @@ function fragmentParams(hash: string): URLSearchParams {
 export function linkKeyFromHash(hash: string): Hex | null {
   const k = fragmentParams(hash).get('k');
   if (!k) return null;
-  const key = (k.startsWith('0x') || k.startsWith('0X') ? `0x${k.slice(2)}` : `0x${k}`).toLowerCase();
+  // Chat apps sometimes glue text or tracking parameters onto the end of a link: keep the leading 64 hex digits.
+  const m = /^(?:0[xX])?([0-9a-fA-F]{64})(?![0-9a-fA-F])/.exec(k.trim());
+  if (!m) return null;
+  const key = `0x${m[1]}`.toLowerCase();
   return isPrivateKey(key) ? (key as Hex) : null;
 }
 
 export interface LinkFragment {
   key: Hex | null;
-  /** True when the link names a contract (`&c=`). Older links carry only `#k=`. */
+  /** True when the link names a readable contract (`&c=`). Older links carry only `#k=`; a damaged `c` counts as absent. */
   hasContract: boolean;
   /** The named Hongbao contract, or null when absent or not an address. */
   contract: Address | null;
@@ -189,8 +192,11 @@ export interface LinkFragment {
 
 export function parseLinkFragment(hash: string): LinkFragment {
   const c = fragmentParams(hash).get('c');
-  const contract = c && /^0x[0-9a-fA-F]{40}$/.test(c) ? (c as Address) : null;
-  return { key: linkKeyFromHash(hash), hasContract: c !== null, contract };
+  // `c` is only a hint for a clearer error; the key is still checked against the packet's claimKey. A chat app
+  // can append text to it or cut it short, so take a leading address if there is one and otherwise ignore it.
+  const m = c ? /^0x[0-9a-fA-F]{40}(?![0-9a-fA-F])/.exec(c.trim()) : null;
+  const contract = m ? (m[0] as Address) : null;
+  return { key: linkKeyFromHash(hash), hasContract: contract !== null, contract };
 }
 
 /**

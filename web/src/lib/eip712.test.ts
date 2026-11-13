@@ -256,8 +256,28 @@ describe('link format', () => {
     expect(checkLink(withC, HB, other)).toBe('keyMismatch');
     // Another deployment's link is refused before the packet is even read.
     expect(checkLink(parseLinkFragment(`#k=${LINK_KEY}&c=${other}`), HB)).toBe('otherDeployment');
-    expect(checkLink(parseLinkFragment(`#k=${LINK_KEY}&c=0x12`), HB)).toBe('otherDeployment');
     expect(checkLink(parseLinkFragment(`#c=${other}`), HB)).toBe('otherDeployment');
+  });
+
+  it('reads links that a chat app damaged at the end, and still checks the key against the packet', () => {
+    // Text, punctuation or tracking parameters glued on, or the contract cut short: the key decides.
+    for (const tail of ['朋友快領', '。', ')', '?openExternalBrowser=1', '&fbclid=abc', ' ', '%E2%80%8B']) {
+      const frag = parseLinkFragment(`#k=${LINK_KEY}&c=${HB}${tail}`);
+      expect(frag, tail).toEqual({ key: LINK_KEY, hasContract: true, contract: HB });
+      expect(checkLink(frag, HB, LINK_KEY_ADDRESS), tail).toBe('ok');
+    }
+    for (const cut of [`${HB.slice(0, 20)}`, '0x12', '', 'zzz']) {
+      const frag = parseLinkFragment(`#k=${LINK_KEY}&c=${cut}`);
+      expect(frag, cut).toEqual({ key: LINK_KEY, hasContract: false, contract: null });
+      expect(checkLink(frag, HB, LINK_KEY_ADDRESS), cut).toBe('ok');
+      expect(checkLink(frag, HB, '0x9999999999999999999999999999999999999999'), cut).toBe('keyMismatch');
+    }
+    // An old #k=-only link with text glued on still opens; a cut key does not.
+    expect(linkKeyFromHash(`#k=${LINK_KEY}。`)).toBe(LINK_KEY);
+    expect(linkKeyFromHash(`#k=${LINK_KEY.slice(0, 40)}`)).toBeNull();
+    // A longer hex run is not silently shortened into a different key.
+    expect(linkKeyFromHash(`#k=${LINK_KEY}ab`)).toBeNull();
+    expect(parseLinkFragment(`#k=${LINK_KEY}&c=${HB}ab`).hasContract).toBe(false);
   });
 
   it('keeps accepting old #k=-only links, checked against the packet’s claimKey', () => {

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-13T14:49:52.226Z",
+  "generatedAt": "2026-11-13T17:00:56.769Z",
   "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
   "chains": {
     "31611": {
@@ -190,24 +190,40 @@
           }
         ],
         "fromBlock": 16730213,
-        "toBlock": 16756549
+        "toBlock": 16758442
       }
     },
     "31612": {
       "stats": {
-        "packets": "0",
+        "packets": "1",
         "claims": "0",
-        "volume": "0",
+        "volume": "15008400000000000000",
         "recipients": "0",
-        "senders": "0",
-        "open": "0"
+        "senders": "1",
+        "open": "15008400000000000000"
       },
       "recent": {
-        "created": [],
+        "created": [
+          {
+            "id": "1",
+            "sender": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
+            "net": "15008400000000000000",
+            "fee": "151600000000000000",
+            "shares": 15,
+            "expiry": 1794674868,
+            "funding": "MUSD",
+            "claimKey": "0xe103bE020e3109d22122FcD5914D91b7a70F63Cf",
+            "attester": "0x5c0028890610513Fde47EC05d0336a1fD9ADD04d",
+            "message": "Happy Hongbao ! 恭喜發財 🧧",
+            "blockNumber": 13203892,
+            "txHash": "0x545eab6c0d8bc5cf1d55a21756c904031e0d7ab59a56a9405aec3bbab1b9e132",
+            "timestamp": 0
+          }
+        ],
         "claimed": [],
         "refunded": [],
         "fromBlock": 13190614,
-        "toBlock": 13202017
+        "toBlock": 13204091
       }
     }
   }
