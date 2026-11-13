@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-11-13T02:45:34.314Z",
+  "generatedAt": "2026-11-13T18:35:19.016Z",
   "chains": {
     "31611": {
       "summary": {
         "contract": "0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4",
         "fromBlock": 16730213,
-        "toBlock": 16746260,
-        "packets": 5,
-        "claims": 6,
+        "toBlock": 16759806,
+        "packets": 6,
+        "claims": 7,
         "refunds": 1,
-        "musdIntoPackets": "126.41",
+        "musdIntoPackets": "128.39",
         "senders": 2,
         "outsideSenders": 0,
-        "recipients": 5,
+        "recipients": 6,
         "outsideRecipients": 0,
         "outsideRecipientsWhoSignedOwnTx": 0,
         "claimsByPayout": {
-          "stake": 4,
+          "stake": 5,
           "save": 1,
           "cash": 1
         },
@@ -73,6 +73,16 @@
           "funding": "Mezo loan",
           "loanTx": "0x784ea30adab5f3b697d657887e3844b29fddff1f3916cf9b22078c622716818e",
           "tx": "0x5948b78b0a375472dc12b1d21a2e2e4c36c327813780dd943a1f0b65dc2a71c2"
+        },
+        {
+          "id": "6",
+          "sender": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "tag": "team",
+          "net": "1.98",
+          "shares": 2,
+          "funding": "MUSD",
+          "loanTx": null,
+          "tx": "0xaf2e1efb74a663d6bb10832f84384ecc55540248c3c5c14ac55cf8f1b19073fc"
         }
       ],
       "claims": [
@@ -135,6 +145,16 @@
           "payout": "Earn MEZO (staked)",
           "signedOwnTx": false,
           "tx": "0x96462a8af9ecf009ca071d5623f595197f05a173b142b5658b0fd7ab1a1fd460"
+        },
+        {
+          "id": "6",
+          "recipient": "0xE19abfdFE2f1Cbe3EC763C8e8dffD2A199a3047C",
+          "tag": "team",
+          "relayer": "0x7B5903E4c4F660cd916f0531BF5eD9De03252c54",
+          "amount": "0.99",
+          "payout": "Earn MEZO (staked)",
+          "signedOwnTx": false,
+          "tx": "0xf1df9ef879f669ea4afdcc5861efacc536c0e16fbaa92431d2b31b0e3da430c0"
         }
       ],
       "refunds": [
@@ -151,26 +171,58 @@
       "summary": {
         "contract": "0x116ca33fB361497010a5AA0f1eA5368D304728Ee",
         "fromBlock": 13190614,
-        "toBlock": 13190648,
-        "packets": 0,
-        "claims": 0,
+        "toBlock": 13205586,
+        "packets": 2,
+        "claims": 1,
         "refunds": 0,
-        "musdIntoPackets": "0.00",
-        "senders": 0,
+        "musdIntoPackets": "30.02",
+        "senders": 1,
         "outsideSenders": 0,
-        "recipients": 0,
-        "outsideRecipients": 0,
+        "recipients": 1,
+        "outsideRecipients": 1,
         "outsideRecipientsWhoSignedOwnTx": 0,
         "claimsByPayout": {
-          "stake": 0,
+          "stake": 1,
           "save": 0,
           "cash": 0
         },
         "fundedWithBTC": 0,
         "fundedFromMezoLoan": 0
       },
-      "packets": [],
-      "claims": [],
+      "packets": [
+        {
+          "id": "1",
+          "sender": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
+          "tag": "team",
+          "net": "15.01",
+          "shares": 15,
+          "funding": "MUSD",
+          "loanTx": null,
+          "tx": "0x545eab6c0d8bc5cf1d55a21756c904031e0d7ab59a56a9405aec3bbab1b9e132"
+        },
+        {
+          "id": "2",
+          "sender": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
+          "tag": "team",
+          "net": "15.01",
+          "shares": 15,
+          "funding": "MUSD",
+          "loanTx": null,
+          "tx": "0xf98432b386bb57c4addbbd9ca65390fdfbfb1b7e285c5430a36bae125613b999"
+        }
+      ],
+      "claims": [
+        {
+          "id": "1",
+          "recipient": "0x572ac141615449Dbb9495a63b30a893332510FEA",
+          "tag": "outside",
+          "relayer": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
+          "amount": "1.00",
+          "payout": "Earn MEZO (staked)",
+          "signedOwnTx": false,
+          "tx": "0x15e18226f084c4da4800b0df9ab6c658f1dfff435d8bde14afa2692bdafb62fd"
+        }
+      ],
       "refunds": []
     }
   }

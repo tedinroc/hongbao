@@ -1,19 +1,19 @@
 # Hongbao on-chain evidence
 
-Generated 2026-11-13T02:45:34.314Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
+Generated 2026-11-13T18:35:19.016Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
 
 ## Mezo testnet
 
-Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16746260
+Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16759806
 
 | | |
 |---|---|
-| Packets | 5 (1 funded with BTC, 1 from a Mezo loan) |
-| MUSD put into packets | 126.41 |
-| Claims | 6 (staked 4, saved 1, cash 1) |
+| Packets | 6 (1 funded with BTC, 1 from a Mezo loan) |
+| MUSD put into packets | 128.39 |
+| Claims | 7 (staked 5, saved 1, cash 1) |
 | Refunds | 1 |
 | Distinct senders | 2 (outside: 0) |
-| Distinct recipients | 5 (outside: 0) |
+| Distinct recipients | 6 (outside: 0) |
 | Outside recipients who later signed their own transaction | 0 |
 
 ### Packets
@@ -25,6 +25,7 @@ Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4a
 | 3 | [0x7B59…2c54](https://explorer.test.mezo.org/address/0x7B5903E4c4F660cd916f0531BF5eD9De03252c54) team | 15.53 | 2 | BTC | [0xe4ea1f61…](https://explorer.test.mezo.org/tx/0xe4ea1f61eecab228af326865cb7a6d47809256e09d1eaba1e96e5c853a8af345) |
 | 4 | [0x7B59…2c54](https://explorer.test.mezo.org/address/0x7B5903E4c4F660cd916f0531BF5eD9De03252c54) team | 39.60 | 20 | MUSD | [0xdb873232…](https://explorer.test.mezo.org/tx/0xdb8732327c61a15fe9fe95dca1afeffd7f147a6cf63463cdb2cb0210ec69bcc2) |
 | 5 | [0x9bfD…23CA](https://explorer.test.mezo.org/address/0x9bfD25e1658923804EBFE471993Bba7Bbf0E23CA) team | 11.88 | 10 | Mezo loan (withdrawMUSD [0x784ea30a…](https://explorer.test.mezo.org/tx/0x784ea30adab5f3b697d657887e3844b29fddff1f3916cf9b22078c622716818e)) | [0x5948b78b…](https://explorer.test.mezo.org/tx/0x5948b78b0a375472dc12b1d21a2e2e4c36c327813780dd943a1f0b65dc2a71c2) |
+| 6 | [0x7B59…2c54](https://explorer.test.mezo.org/address/0x7B5903E4c4F660cd916f0531BF5eD9De03252c54) team | 1.98 | 2 | MUSD | [0xaf2e1efb…](https://explorer.test.mezo.org/tx/0xaf2e1efb74a663d6bb10832f84384ecc55540248c3c5c14ac55cf8f1b19073fc) |
 
 ### Claims
 
@@ -36,6 +37,7 @@ Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4a
 | 3 | [0x825e…488e](https://explorer.test.mezo.org/address/0x825eC0b18883d6349De211Ab46403Ba0E185488e) team | 7.77 | Earn MEZO (staked) | yes | [0x02a6b5bf…](https://explorer.test.mezo.org/tx/0x02a6b5bfc884a99d7e1b69e4e7310932b09a1b285e5cbdd1ffe0ce5f40161352) |
 | 1 | [0x023C…7f39](https://explorer.test.mezo.org/address/0x023CeAc4f5db03F2402dA5Eaa0f3E5288ABf7f39) team | 9.90 | Earn MEZO (staked) | no | [0xffef93fb…](https://explorer.test.mezo.org/tx/0xffef93fb13ba38adf17e2ff5e406ebbfb50efa9a95b92bd4adfafed18476406e) |
 | 5 | [0xDbfB…CB4E](https://explorer.test.mezo.org/address/0xDbfB12E7b9F94723828C4bc66CB3D06B306dCB4E) team | 1.19 | Earn MEZO (staked) | no | [0x96462a8a…](https://explorer.test.mezo.org/tx/0x96462a8af9ecf009ca071d5623f595197f05a173b142b5658b0fd7ab1a1fd460) |
+| 6 | [0xE19a…047C](https://explorer.test.mezo.org/address/0xE19abfdFE2f1Cbe3EC763C8e8dffD2A199a3047C) team | 0.99 | Earn MEZO (staked) | no | [0xf1df9ef8…](https://explorer.test.mezo.org/tx/0xf1df9ef879f669ea4afdcc5861efacc536c0e16fbaa92431d2b31b0e3da430c0) |
 
 ### Refunds
 
@@ -45,24 +47,27 @@ Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4a
 
 ## Mezo mainnet
 
-Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13190648
+Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13205586
 
 | | |
 |---|---|
-| Packets | 0 (0 funded with BTC, 0 from a Mezo loan) |
-| MUSD put into packets | 0.00 |
-| Claims | 0 (staked 0, saved 0, cash 0) |
+| Packets | 2 (0 funded with BTC, 0 from a Mezo loan) |
+| MUSD put into packets | 30.02 |
+| Claims | 1 (staked 1, saved 0, cash 0) |
 | Refunds | 0 |
-| Distinct senders | 0 (outside: 0) |
-| Distinct recipients | 0 (outside: 0) |
+| Distinct senders | 1 (outside: 0) |
+| Distinct recipients | 1 (outside: 1) |
 | Outside recipients who later signed their own transaction | 0 |
 
 ### Packets
 
 | # | Sender | Net MUSD | Shares | Funding | Tx |
 |---|---|---|---|---|---|
+| 1 | [0x7233…73d0](https://explorer.mezo.org/address/0x72331BeDebEF80983E9B4be073E9c7870F3d73d0) team | 15.01 | 15 | MUSD | [0x545eab6c…](https://explorer.mezo.org/tx/0x545eab6c0d8bc5cf1d55a21756c904031e0d7ab59a56a9405aec3bbab1b9e132) |
+| 2 | [0x7233…73d0](https://explorer.mezo.org/address/0x72331BeDebEF80983E9B4be073E9c7870F3d73d0) team | 15.01 | 15 | MUSD | [0xf98432b3…](https://explorer.mezo.org/tx/0xf98432b386bb57c4addbbd9ca65390fdfbfb1b7e285c5430a36bae125613b999) |
 
 ### Claims
 
 | # | Recipient | MUSD | Received as | Signed own tx later | Tx |
 |---|---|---|---|---|---|
+| 1 | [0x572a…0FEA](https://explorer.mezo.org/address/0x572ac141615449Dbb9495a63b30a893332510FEA) outside | 1.00 | Earn MEZO (staked) | no | [0x15e18226…](https://explorer.mezo.org/tx/0x15e18226f084c4da4800b0df9ab6c658f1dfff435d8bde14afa2692bdafb62fd) |

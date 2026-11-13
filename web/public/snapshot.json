@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-13T17:00:56.769Z",
+  "generatedAt": "2026-11-13T18:36:00.103Z",
   "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
   "chains": {
     "31611": {
@@ -190,20 +190,35 @@
           }
         ],
         "fromBlock": 16730213,
-        "toBlock": 16758442
+        "toBlock": 16759815
       }
     },
     "31612": {
       "stats": {
-        "packets": "1",
-        "claims": "0",
-        "volume": "15008400000000000000",
-        "recipients": "0",
+        "packets": "2",
+        "claims": "1",
+        "volume": "30016800000000000000",
+        "recipients": "1",
         "senders": "1",
-        "open": "15008400000000000000"
+        "open": "29016240000000000000"
       },
       "recent": {
         "created": [
+          {
+            "id": "2",
+            "sender": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
+            "net": "15008400000000000000",
+            "fee": "151600000000000000",
+            "shares": 15,
+            "expiry": 1794680053,
+            "funding": "MUSD",
+            "claimKey": "0xcC047b7CF197E2E87EDC74C4B33AB02835ebe27C",
+            "attester": "0x5c0028890610513Fde47EC05d0336a1fD9ADD04d",
+            "message": "恭喜發財",
+            "blockNumber": 13205255,
+            "txHash": "0xf98432b386bb57c4addbbd9ca65390fdfbfb1b7e285c5430a36bae125613b999",
+            "timestamp": 0
+          },
           {
             "id": "1",
             "sender": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
@@ -220,10 +235,21 @@
             "timestamp": 0
           }
         ],
-        "claimed": [],
+        "claimed": [
+          {
+            "id": "1",
+            "recipient": "0x572ac141615449Dbb9495a63b30a893332510FEA",
+            "relayer": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
+            "amount": "1000560000000000000",
+            "payout": "Stake",
+            "blockNumber": 13204423,
+            "txHash": "0x15e18226f084c4da4800b0df9ab6c658f1dfff435d8bde14afa2692bdafb62fd",
+            "timestamp": 0
+          }
+        ],
         "refunded": [],
         "fromBlock": 13190614,
-        "toBlock": 13204091
+        "toBlock": 13205595
       }
     }
   }

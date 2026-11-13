@@ -32,6 +32,14 @@
     {
       "address": "0xDbfB12E7b9F94723828C4bc66CB3D06B306dCB4E",
       "label": "test recipient (video claim)"
+    },
+    {
+      "address": "0x72331BeDebEF80983E9B4be073E9c7870F3d73d0",
+      "label": "mainnet deployer, guardian and treasury (sends the team's mainnet packets)"
+    },
+    {
+      "address": "0xE19abfdFE2f1Cbe3EC763C8e8dffD2A199a3047C",
+      "label": "test recipient (testnet claim through hongbao.trytry.net, domain check)"
     }
   ]
 }
