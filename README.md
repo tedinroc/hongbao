@@ -1,8 +1,22 @@
-# Hongbao 紅包 — MUSD red packets that land in Mezo savings
+# Hongbao 紅包
+
+**MUSD red packets that land in Mezo savings.**
 
 Send MUSD the way people already send money in group chats: as a red packet. One link in Telegram, WhatsApp or LINE; every friend who taps it gets an equal share **staked in Mezo's sMUSD gauge in their own name by default**, plus a little BTC for gas. They need nothing beforehand: no wallet, no gas, no MUSD.
 
 Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D10), Track 2 (Access and distribution).
+
+**Status:** live on Mezo mainnet as a **capped beta** since 2026-11-13; no external audit yet. Current caps are 50 MUSD per packet, 100 MUSD open per sender and 500 MUSD open in total. See [Safety](#safety) for the guardian's maximum cap-setting powers and [security notes](docs/SECURITY.md) for trust assumptions.
+
+[Open the app](https://hongbao.trytry.net/) · [Watch the demo](https://hongbao.trytry.net/video/) · [Transaction evidence](docs/PROOF.md) · [Run locally](#run-locally) · [Security notes](docs/SECURITY.md)
+
+## Start here
+
+- **See the flow:** watch the [1:59 demo](https://youtu.be/1dhi0hyeWZ8), covering testnet interaction and a mainnet packet.
+- **Inspect the implementation:** start with [how it works](#how-it-works), then the [contract](contracts/src/Hongbao.sol) and [security model](docs/SECURITY.md).
+- **Try the code:** use the [local build and tests](#run-locally); these commands do not deploy contracts or send funds.
+
+## Project links
 
 | | |
 |---|---|
@@ -53,7 +67,7 @@ expiry ──refund──▶ unclaimed MUSD and unused gas back to the sender
 - Every packet is refundable by its sender at any time and by anyone (to the sender) after expiry. If the savings vault ever refuses a withdrawal, refunds and cash claims fall back to paying sMUSD in kind.
 - Native BTC goes out last under a reentrancy guard; recipients that refuse BTC can pull it later.
 - Claims are bound by EIP-712 to the recipient, the payout and the relayer, so a copied transaction can neither redirect the money nor take the relay tip.
-- Reviewed in three independent passes before deployment (funds and accounting, authorization, correctness against Mezo's verified sources) and once more after the mainnet deploy; every confirmed finding is fixed or documented. See [docs/SECURITY.md](docs/SECURITY.md).
+- Reviewed in three independent AI-assisted passes before deployment (funds and accounting, authorization, correctness against Mezo's verified sources) and once more after the mainnet deploy; every confirmed finding is fixed or documented. See [docs/SECURITY.md](docs/SECURITY.md).
 - Tests: `cd contracts && forge test` (28 unit, adversarial and fuzz tests, including a conservation fuzz: every MUSD is either paid out or refunded); `cd web && npm test` (116 tests); `scripts/e2e-fork.sh` runs the contract, relayer and app together on a fork of Mezo testnet.
 
 ## Repository
@@ -67,10 +81,16 @@ expiry ──refund──▶ unclaimed MUSD and unused gas back to the sender
 
 ## Run locally
 
+Requirements: Git, Foundry, Node.js and npm. The clone includes the OpenZeppelin and forge-std submodules used by the contracts.
+
 ```bash
-cd contracts && forge test
-cd web && npm install && npm run build && npm test
+git clone --recurse-submodules https://github.com/tedinroc/hongbao.git
+cd hongbao
+(cd contracts && forge test)
+(cd web && npm ci && npm run build && npm test)
 ```
+
+For an existing clone, run `git submodule update --init --recursive` first. To start the frontend after installing dependencies, run `(cd web && npm run dev)`. Contract deployment, relaying and mainnet interactions are separate from these build commands.
 
 ## Built with AI assistance
 
