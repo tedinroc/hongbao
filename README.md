@@ -6,8 +6,8 @@ Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D
 
 | | |
 |---|---|
-| Live app | https://hongbao.trytry.net (no wallet needed to open or claim). https://hongbao-mezo.pages.dev serves the same build, but MetaMask warns on every `*.pages.dev` site when you connect, so connect a wallet on hongbao.trytry.net |
-| Demo video | https://youtu.be/KoJl0qOz5B4 (1:44, app footage on live Mezo testnet; also at https://hongbao.trytry.net/video/) |
+| Live app | https://hongbao.trytry.net (no wallet needed to open or claim). Old `hongbao-mezo.pages.dev` links redirect here |
+| Demo video | https://youtu.be/1dhi0hyeWZ8 (1:59: the app on live Mezo testnet, then a real packet sent from MetaMask on Mezo mainnet; also at https://hongbao.trytry.net/video/) |
 | Deck | https://hongbao.trytry.net/deck.pdf ([source](docs/deck/)) |
 | Track | Track 2: Access and distribution (Mezo Adoption) |
 | Contract | Mezo mainnet [`0x116ca33fB361497010a5AA0f1eA5368D304728Ee`](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee) (capped beta, source verified); Mezo testnet [`0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4`](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4) (source verified) |

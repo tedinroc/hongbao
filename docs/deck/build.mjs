@@ -35,7 +35,7 @@ const CHROME = process.env.CHROME_BIN || '/Applications/Google Chrome.app/Conten
 // Facts that are not on-chain. Keep in sync with README.md and docs/SECURITY.md.
 const FACTS = {
   repo: 'https://github.com/tedinroc/hongbao',
-  appTests: 107, // `cd web && npm test` (vitest)
+  appTests: 116, // `cd web && npm test` (vitest)
   reviewPasses: 3, // docs/SECURITY.md: three AI-assisted passes
   // MUSD; read from contracts/script/Deploy.s.sol when it is there, these are the fallback
   mainnetCaps: { perPacket: 50, perSender: 100, total: 500 },
@@ -66,6 +66,7 @@ const fmtInt = (n) => Number(n).toLocaleString('en-US');
 const weiToNum = (w) => Number(BigInt(w) / 10n ** 14n) / 1e4; // 4 decimals is plenty for display
 const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const fmtStamp = (d) => `${fmtDate(d)} ${new Date(d).toISOString().slice(11, 16)} UTC`;   // a fixed time, not 'matches live' (new claims keep coming)
 
 // Tags addresses from /api/stats recent events with config/team-wallets.json. Only trusted when the events cover the
 // whole deployment (the endpoint returns at most 20 events per kind from a limited block window).
@@ -126,7 +127,7 @@ async function loadData() {
       try {
         const live = await getJson(`${SITE}/api/stats?chainId=${id}`);
         const tagged = tagLive(live, team, deployBlock);
-        const asOf = fmtDate(live.block?.timestamp ? live.block.timestamp * 1000 : Date.now());
+        const asOf = fmtStamp(live.block?.timestamp ? live.block.timestamp * 1000 : Date.now());
         const newer = !s || +live.stats.packets > s.packets || +live.stats.claims > s.claims;
         if (tagged && newer) {
           // keep the proof-only metric when the live data adds nothing new for outside recipients
@@ -135,7 +136,7 @@ async function loadData() {
         } else if (newer) {
           liveNote = `Live counter now: ${fmtInt(live.stats.packets)} packets, ${fmtInt(live.stats.claims)} claims (all wallets, ${asOf})`;
         } else {
-          source = `${proofName}, ${fmtDate(proof.generatedAt)}; matches live /api/stats, ${asOf}`;
+          source = `${proofName}, matches live /api/stats as of ${asOf}`;
         }
         log(`chain ${id}: live packets=${live.stats.packets} claims=${live.stats.claims} recipients=${live.stats.recipients}`);
       } catch (e) { warn(`live stats for ${id} unreachable (${e.message}); using docs/proof.json`); }
@@ -186,14 +187,17 @@ function gasKit() {
 }
 
 // One real testnet transaction per Mezo call path, from docs/proof.json.
-function proofTxs(proof, explorer) {
-  const c = proof.chains?.['31611'] || {};
+function proofTxs(proof) {
+  const c = proof.chains?.['31611'] || {}, m = proof.chains?.['31612'] || {};
+  const T = CHAINS[31611].explorer, M = CHAINS[31612].explorer;
   const pick = (list, test) => (list || []).find(test)?.tx || null;
-  const link = (label, tx) => (tx
+  const link = (label, tx, explorer = T) => (tx
     ? `<a class="tx" href="${esc(`${explorer}/tx/${tx}`)}"><span>${esc(label)}</span><b>${esc(tx.slice(0, 10))}…</b></a>`
     : '<span class="by-app">not yet on testnet</span>');
   const tx = {
-    fundMusd: pick(c.packets, (p) => p.funding === 'MUSD'),
+    // the permit row needs a createWithPermit tx: on testnet that is packet #5 (permit after the loan); packets #1, #2, #4
+    // and #6 used create with a separate approval
+    fundMusd: pick(c.packets, (p) => !!p.loanTx),
     fundBtc: pick(c.packets, (p) => p.funding === 'BTC'),
     stake: pick(c.claims, (x) => /^Earn MEZO/.test(x.payout)),
     save: pick(c.claims, (x) => /^Save/.test(x.payout)),
@@ -202,10 +206,13 @@ function proofTxs(proof, explorer) {
     loan: (c.packets || []).find((p) => p.loanTx)?.loanTx || null,
   };
   for (const [k, v] of Object.entries(tx)) if (!v) warn(`docs/proof.json has no testnet transaction for ${k}`);
+  const mFund = pick(m.packets, (p) => p.funding === 'MUSD' && !p.loanTx), mStake = pick(m.claims, (x) => /^Earn MEZO/.test(x.payout));
   return {
-    txFundMusd: link('MUSD packet', tx.fundMusd),
+    // mainnet evidence where it exists: every mainnet packet so far was funded from MetaMask with createWithPermit, and
+    // every mainnet claim was staked in the gauge
+    txFundMusd: mFund ? link('Mainnet packet', mFund, M) : link('MUSD packet', tx.fundMusd),
     txFundBtc: link('BTC packet', tx.fundBtc),
-    txStake: link('Staked claim', tx.stake),
+    txStake: mStake ? link('Mainnet staked claim', mStake, M) : link('Staked claim', tx.stake),
     txSave: link('Save', tx.save),
     txCash: link('Cash', tx.cash),
     txRefund: link('Refund', tx.refund),
@@ -258,19 +265,23 @@ function tractionHtml(chains, ledgerUrl) {
   } else {
     h += `<h2>${fmtInt(s.outsideRecipients)} ${plural(s.outsideRecipients, 'wallet', 'wallets')} outside the team opened a packet.</h2>`;
     h += `<div class="row-label"><span class="tag">${esc(main.name)}</span><span>Outside = not in the team wallet list</span></div>`;
-    h += '<div class="stats4">';
-    h += stat(fmtInt(s.outsideRecipients), 'outside recipients', `of ${fmtInt(s.recipients)} in all`, 'hot');
-    h += stat(fmtInt(s.outsideSenders), 'outside senders', `of ${fmtInt(s.senders)} in all`, 'hot');
-    if (s.outsideRecipientsWhoSignedOwnTx != null) h += stat(fmtInt(s.outsideRecipientsWhoSignedOwnTx), 'came back', 'outside recipients who later signed their own transaction', 'hot');
-    else h += stat(fmtInt(s.packets), plural(s.packets, 'packet', 'packets'), funded);
-    h += stat(fmtInt(s.claims), plural(s.claims, 'claim', 'claims'), payouts);
-    h += '</div>';
-    h += `<div class="callout"><div class="callout-head">${fmtMusd(s.musdIntoPackets)} MUSD into packets, all wallets</div>`;
-    h += `<div class="callout-body">Every packet and claim, tagged team or outside: <a href="${esc(ledgerUrl)}">${esc(ledgerHost)}</a></div></div>`;
+    // outside metrics are highlighted only when they are above zero; the other slots carry the plain totals
+    const cards = [stat(fmtInt(s.outsideRecipients), 'outside recipients', `of ${fmtInt(s.recipients)} in all`, 'hot')];
+    if (s.outsideSenders > 0) cards.push(stat(fmtInt(s.outsideSenders), 'outside senders', `of ${fmtInt(s.senders)} in all`, 'hot'));
+    if (s.outsideRecipientsWhoSignedOwnTx > 0) cards.push(stat(fmtInt(s.outsideRecipientsWhoSignedOwnTx), 'came back', 'outside recipients who later signed their own transaction', 'hot'));
+    cards.push(stat(fmtInt(s.packets), plural(s.packets, 'packet', 'packets'), s.outsideSenders > 0 ? funded : `sent by the team, ${funded}`));
+    cards.push(stat(fmtInt(s.claims), plural(s.claims, 'claim', 'claims'), payouts));
+    const musdCard = cards.length < 4;
+    if (musdCard) cards.push(stat(fmtMusd(s.musdIntoPackets), 'MUSD into packets', 'all wallets, parked as sMUSD until claimed'));
+    h += `<div class="stats4">${cards.slice(0, 4).join('')}</div>`;
+    h += `<div class="callout"><div class="callout-head">${musdCard ? 'Every packet and claim is public' : `${fmtMusd(s.musdIntoPackets)} MUSD into packets, all wallets`}</div>`;
+    h += `<div class="callout-body">${musdCard ? 'Tagged team or outside, with explorer links' : 'Every packet and claim, tagged team or outside'}: <a href="${esc(ledgerUrl)}">${esc(ledgerHost)}</a></div></div>`;
   }
   for (const c of others) {
     const o = c.stats;
-    h += `<p class="fine">${esc(c.name)}: ${fmtInt(o.packets)} packets, ${fmtInt(o.claims)} claims, ${fmtMusd(o.musdIntoPackets)} MUSD; outside recipients ${fmtInt(o.outsideRecipients)}.</p>`;
+    h += o.outsideRecipients > 0
+      ? `<p class="fine">${esc(c.name)}: ${fmtInt(o.packets)} packets, ${fmtInt(o.claims)} claims, ${fmtMusd(o.musdIntoPackets)} MUSD; outside recipients ${fmtInt(o.outsideRecipients)}.</p>`
+      : `<p class="fine">${esc(c.name)} (team test runs, every funding path and payout): ${fmtInt(o.packets)} packets, ${fmtInt(o.claims)} claims, ${fmtMusd(o.musdIntoPackets)} MUSD.</p>`;
   }
   if (main.liveNote) h += `<p class="fine">${esc(main.liveNote)}</p>`;
   // the footer links to the evidence: PROOF.md on GitHub (explorer link per transaction), or the live ledger
@@ -293,7 +304,8 @@ function extraLinkRows() {
 }
 
 function contractRows(chains) {
-  return chains.filter((c) => c.address).map((c) => {
+  // mainnet first
+  return chains.filter((c) => c.address).sort((a, b) => (b.id === 31612) - (a.id === 31612)).map((c) => {
     const url = `${c.explorer}/address/${c.address}`;
     return `<div class="link-row"><div class="link-k">Contract</div><div class="link-v"><a class="mono addr" href="${esc(url)}">${esc(c.address)}</a><span class="link-note">${esc(c.name)} · source verified on ${esc(c.explorer.replace(/^https?:\/\//, ''))}</span></div></div>`;
   }).join('\n');
@@ -477,7 +489,7 @@ async function main() {
       capPacket: fmtInt(caps.soft.perPacket), capSender: fmtInt(caps.soft.perSender), capTotal: fmtInt(caps.soft.total),
       hardPacket: fmtInt(caps.hard.perPacket), hardSender: fmtInt(caps.hard.perSender), hardTotal: fmtInt(caps.hard.total),
       kitBtc: kit.kit, dripBtc: kit.drip, tipBtc: kit.tip,
-      ...proofTxs(proof, CHAINS[31611].explorer),
+      ...proofTxs(proof),
       imgCover: img['cover-opened-zh'], imgSend: img.send, imgClaim: img.claim, imgOpened: img.opened, imgNext: img.next,
       traction: traction.html, tractionSource: traction.source, proofUrl: traction.sourceUrl,
       contractRows: contractRows(chains),

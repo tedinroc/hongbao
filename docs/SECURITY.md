@@ -20,7 +20,7 @@ Invariants (tested, including a fuzzed conservation test):
 | Link holder | sign a claim for any recipient address, once per address | change the payout after signing, reuse a signature for another recipient, packet, chain or contract |
 | Attester (relayer backend, optional per packet) | co-sign one claim per person after device/IP limits | claim without the link key |
 | Relayer (anyone) | submit claims and earn the per-share tip | alter recipient or payout (both are signed) |
-| Guardian | pause new packets, lower caps below immutable hard caps, hand over the role | move, freeze or redirect any funds; block claims or refunds |
+| Guardian | pause new packets, set caps up to the immutable hard caps, hand over the role | move, freeze or redirect any funds; block claims or refunds |
 
 There is no owner, no upgrade path and no admin withdrawal.
 
@@ -42,7 +42,7 @@ There is no owner, no upgrade path and no admin withdrawal.
 | AUTH-L1 / FUNDS-5 | Low | A copied claim transaction could take the relay tip | Fixed: `relayer` is part of the signed Claim; `WrongRelayer` otherwise |
 | AUTH-L2 | Low | An attestation did not bind the payout, so another link holder could switch a victim from Stake to Cash | Fixed: Attest now includes payout |
 | AUTH-L3 / FUNDS-3 | Low | A share sent to the Hongbao, sMUSD, gauge, MUSD or BTC contract would be stranded or swept | Fixed: `BadRecipient` |
-| AUTH-L4 / FUNDS-4 | Low | Guardian and treasury defaulted to the relayer hot key; single-step guardian handover | Fixed: two-step handover; mainnet deploy uses separate guardian/treasury addresses |
+| AUTH-L4 / FUNDS-4 | Low | Guardian and treasury defaulted to the relayer hot key; single-step guardian handover | Fixed: two-step handover; the mainnet guardian/treasury is a wallet separate from the relayer hot key |
 | MEZO-1 | Low | `fetchPrice` was called as `view`; a Liquity-style PriceFeed upgrade would break BTC funding | Fixed: non-view call with a clear `OracleUnavailable` error |
 | AUTH-I2 | Info | A recipient contract returning huge data made the relayer pay extra gas | Fixed: BTC send does not copy return data |
 | AUTH-I5 | Info | Malformed signatures reverted with library errors | Fixed: `BadSignature` |

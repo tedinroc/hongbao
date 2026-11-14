@@ -1,10 +1,10 @@
 # Hongbao on-chain evidence
 
-Generated 2026-11-14T03:03:54.246Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
+Generated 2026-11-14T14:50:53.734Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
 
 ## Mezo testnet
 
-Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16767152
+Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16777366
 
 | | |
 |---|---|
@@ -47,16 +47,16 @@ Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4a
 
 ## Mezo mainnet
 
-Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13213624
+Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13224800
 
 | | |
 |---|---|
 | Packets | 3 (0 funded with BTC, 0 from a Mezo loan) |
 | MUSD put into packets | 38.81 |
-| Claims | 2 (staked 2, saved 0, cash 0) |
+| Claims | 3 (staked 3, saved 0, cash 0) |
 | Refunds | 0 |
 | Distinct senders | 1 (outside: 0) |
-| Distinct recipients | 2 (outside: 2) |
+| Distinct recipients | 3 (outside: 3) |
 | Outside recipients who later signed their own transaction | 0 |
 
 ### Packets
@@ -73,3 +73,4 @@ Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a
 |---|---|---|---|---|---|
 | 1 | [0x572a…0FEA](https://explorer.mezo.org/address/0x572ac141615449Dbb9495a63b30a893332510FEA) outside | 1.00 | Earn MEZO (staked) | no | [0x15e18226…](https://explorer.mezo.org/tx/0x15e18226f084c4da4800b0df9ab6c658f1dfff435d8bde14afa2692bdafb62fd) |
 | 1 | [0xBacE…b45F](https://explorer.mezo.org/address/0xBacE7AD069A84E3E881c4F3E2b301c95F6cab45F) outside | 1.00 | Earn MEZO (staked) | no | [0x8c2ac54d…](https://explorer.mezo.org/tx/0x8c2ac54de4aa7bad9f12ec79bf7c8632716644bb8c4ef72881636904fc67f3cb) |
+| 1 | [0xBfFe…E37D](https://explorer.mezo.org/address/0xBfFedAECeD12e8a33695acC6A4F89828df80E37D) outside | 1.00 | Earn MEZO (staked) | no | [0xf3b940fb…](https://explorer.mezo.org/tx/0xf3b940fb305fa7af948a19a680cbb9f6062c670b78b627ece59f1f33032ad080) |

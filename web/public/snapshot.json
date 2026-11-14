@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-14T05:27:20.986Z",
+  "generatedAt": "2026-11-14T14:53:24.760Z",
   "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
   "chains": {
     "31611": {
@@ -190,17 +190,17 @@
           }
         ],
         "fromBlock": 16730213,
-        "toBlock": 16769221
+        "toBlock": 16777400
       }
     },
     "31612": {
       "stats": {
         "packets": "3",
-        "claims": "2",
+        "claims": "3",
         "volume": "38808000000000000000",
-        "recipients": "2",
+        "recipients": "3",
         "senders": "1",
-        "open": "36806880000000000000"
+        "open": "35806320000000000000"
       },
       "recent": {
         "created": [
@@ -253,6 +253,16 @@
         "claimed": [
           {
             "id": "1",
+            "recipient": "0xBfFedAECeD12e8a33695acC6A4F89828df80E37D",
+            "relayer": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
+            "amount": "1000560000000000000",
+            "payout": "Stake",
+            "blockNumber": 13218196,
+            "txHash": "0xf3b940fb305fa7af948a19a680cbb9f6062c670b78b627ece59f1f33032ad080",
+            "timestamp": 0
+          },
+          {
+            "id": "1",
             "recipient": "0xBacE7AD069A84E3E881c4F3E2b301c95F6cab45F",
             "relayer": "0x551fA632b11A20aBb9cDF32c62b2397BCFe0b7a8",
             "amount": "1000560000000000000",
@@ -274,7 +284,7 @@
         ],
         "refunded": [],
         "fromBlock": 13190614,
-        "toBlock": 13215889
+        "toBlock": 13224835
       }
     }
   }

@@ -302,7 +302,7 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
   <div class="kicker">Mezo integration</div>
   <h2>Built on ten Mezo contracts, called directly.</h2>
   <table class="calls">
-    <tr><th>Mezo contract</th><th>Call</th><th>Why</th><th>On Mezo testnet</th></tr>
+    <tr><th>Mezo contract</th><th>Call</th><th>Why</th><th>Proof · testnet unless marked</th></tr>
     <tr><td>MUSD</td><td><code>permit · transferFrom</code></td><td>Fund a packet with a permit signature, no separate approval</td><td>{{{txFundMusd}}}</td></tr>
     <tr><td>MUSD Savings Rate vault (sMUSD)</td><td><code>deposit · withdraw · claimYield</code></td><td>Unclaimed money earns the savings rate</td><td>{{{txSave}}}{{{txCash}}}{{{txRefund}}}</td></tr>
     <tr class="key"><td>sMUSD VaultGauge</td><td><code>deposit(amount, recipient)</code></td><td>Staked shares, the default, sit in the friend’s own name and earn MEZO</td><td>{{{txStake}}}</td></tr>
@@ -345,7 +345,7 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
     <div class="card"><div class="big word">Float</div><h3>Savings yield</h3><p>Unclaimed packets earn the MUSD savings rate for the treasury.</p></div>
     <div class="card"><div class="big word">Tips</div><h3>Self-paying relays</h3><p>Each share carries a tiny BTC tip that pays whoever relays the claim. No gas subsidy.</p></div>
   </div>
-  <div class="next"><span class="tag">PER FRIEND</span><p>Landing one friend in Mezo savings costs 1% of their share plus a <span class="mono">{{kitBtc}}</span> BTC gas kit by default: <span class="mono">{{dripBtc}}</span> for their own gas, <span class="mono">{{tipBtc}}</span> for the relay.</p></div>
+  <div class="next"><span class="tag">PER FRIEND</span><p>Landing one friend in Mezo savings costs a 1% fee plus a <span class="mono">{{kitBtc}}</span> BTC gas kit by default: <span class="mono">{{dripBtc}}</span> for their own gas, <span class="mono">{{tipBtc}}</span> for the relay.</p></div>
   <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
 </section>
 
@@ -364,10 +364,10 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
       <div class="proof"><div class="big">{{contractTests}}</div><p>contract tests incl. fuzz: every MUSD is paid out or refunded</p></div>
       <div class="proof"><div class="big">{{appTests}}</div><p>app tests, plus full runs on a Mezo testnet fork</p></div>
       <div class="proof"><div class="big">{{reviewPasses}}</div><p>AI-assisted review passes; every confirmed issue fixed or documented</p></div>
-      <div class="proof"><div class="big word">Verified</div><p>contract source, on the Mezo testnet explorer</p></div>
+      <div class="proof"><div class="big word">Verified</div><p>contract source, on the Mezo mainnet and testnet explorers</p></div>
     </div>
   </div>
-  <div class="caps"><span class="tag">AT MAINNET LAUNCH</span><span>Beta caps: <span class="mono">{{capPacket}}</span> MUSD per packet · <span class="mono">{{capSender}}</span> open per sender · <span class="mono">{{capTotal}}</span> open in total</span></div>
+  <div class="caps"><span class="tag">MAINNET BETA · LIVE</span><span>Beta caps: <span class="mono">{{capPacket}}</span> MUSD per packet · <span class="mono">{{capSender}}</span> open per sender · <span class="mono">{{capTotal}}</span> open in total</span></div>
   <div class="foot"><span>Hongbao 紅包</span><span class="pn">__PN__</span></div>
 </section>
 
@@ -376,7 +376,7 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
   <div class="kicker">Roadmap · next 3 months</div>
   <h2>From buildathon to Lunar New Year.</h2>
   <div class="timeline">
-    <div class="tl"><div class="tl-when">DEC 2026</div><h3>Mainnet public beta</h3><p>Capped beta on Mezo mainnet, a Telegram bot that posts a live packet card into the chat, and an external review.</p><div class="goal">Goal: 200+ distinct recipients</div></div>
+    <div class="tl"><div class="tl-when">DEC 2026</div><h3>Grow the mainnet beta</h3><p>Capped beta live since Nov 13. Next: a Telegram bot that posts a live packet card into the chat, and an external review.</p><div class="goal">Goal: 200+ distinct recipients</div></div>
     <div class="tl hot"><div class="tl-when">JAN 2027</div><h3>Lunar New Year campaign</h3><p>Review published, caps raised within the hard limits. Themes, scheduled and community packets, ready for Feb 6, 2027.</p><div class="goal">Goal: 1,000+ recipients</div></div>
     <div class="tl"><div class="tl-when">FEB 2027</div><h3>Loan-funded packets in one transaction</h3><p>Borrow from your Mezo loan and fill a packet in a single step.</p></div>
   </div>
@@ -397,10 +397,10 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
 <!-- 12 · links -->
 <section class="slide links">
   <div class="kicker">Try it</div>
-  <h2>Try it on Mezo testnet.</h2>
+  <h2>Live on Mezo mainnet.</h2>
   <div class="link-list{{linkListClass}}">
     {{{extraRows}}}
-    <div class="link-row"><div class="link-k">Live app</div><div class="link-v"><a href="{{liveUrl}}">{{liveHost}}</a><span class="link-note">Mezo testnet · no wallet needed to open or claim</span></div></div>
+    <div class="link-row"><div class="link-k">Live app</div><div class="link-v"><a href="{{liveUrl}}">{{liveHost}}</a><span class="link-note">Mezo mainnet (capped beta) and testnet · no wallet needed to open or claim</span></div></div>
     <div class="link-row"><div class="link-k">Public ledger</div><div class="link-v"><a href="{{ledgerUrl}}">{{ledgerHost}}</a><span class="link-note">every packet and claim, team wallets tagged</span></div></div>
     <div class="link-row"><div class="link-k">Code</div><div class="link-v"><a href="{{repoUrl}}">{{repoHost}}</a><span class="link-note">{{codeNote}}</span></div></div>
     {{{contractRows}}}

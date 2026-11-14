@@ -248,7 +248,7 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
     <div class="pills"><span>No wallet</span><span>No gas</span><span>No MUSD</span><em>needed to open one</em></div>
   </div>
   <div class="phone cover-phone"><img src="img/cover-opened-zh.jpg" alt="Opened red packet in Traditional Chinese: the share is staked in Mezo's gauge"></div>
-  <div class="foot"><a href="https://hongbao-mezo.pages.dev">hongbao-mezo.pages.dev</a><a href="https://github.com/tedinroc/hongbao">github.com/tedinroc/hongbao</a><a href="https://github.com/tedinroc">Ted Chen</a></div>
+  <div class="foot"><a href="https://hongbao.trytry.net">hongbao.trytry.net</a><a href="https://github.com/tedinroc/hongbao">github.com/tedinroc/hongbao</a><a href="https://github.com/tedinroc">Ted Chen</a></div>
 </section>
 
 <!-- 2 · problem -->
@@ -302,10 +302,10 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
   <div class="kicker">Mezo integration</div>
   <h2>Built on ten Mezo contracts, called directly.</h2>
   <table class="calls">
-    <tr><th>Mezo contract</th><th>Call</th><th>Why</th><th>On Mezo testnet</th></tr>
-    <tr><td>MUSD</td><td><code>permit · transferFrom</code></td><td>Fund a packet with a permit signature, no separate approval</td><td><a class="tx" href="https://explorer.test.mezo.org/tx/0xd740a52bdae824f0fd7c3e0d7408c6a2b5f8c50e5175df3a80ae3042bebb4a81"><span>MUSD packet</span><b>0xd740a52b…</b></a></td></tr>
+    <tr><th>Mezo contract</th><th>Call</th><th>Why</th><th>Proof · testnet unless marked</th></tr>
+    <tr><td>MUSD</td><td><code>permit · transferFrom</code></td><td>Fund a packet with a permit signature, no separate approval</td><td><a class="tx" href="https://explorer.mezo.org/tx/0x545eab6c0d8bc5cf1d55a21756c904031e0d7ab59a56a9405aec3bbab1b9e132"><span>Mainnet packet</span><b>0x545eab6c…</b></a></td></tr>
     <tr><td>MUSD Savings Rate vault (sMUSD)</td><td><code>deposit · withdraw · claimYield</code></td><td>Unclaimed money earns the savings rate</td><td><a class="tx" href="https://explorer.test.mezo.org/tx/0x8319785afa26c1b636c17992b99d3e8e877e4210831b92ec066c700519874bc0"><span>Save</span><b>0x8319785a…</b></a><a class="tx" href="https://explorer.test.mezo.org/tx/0x36ef7ae79b7a642e08f713a9220553a71cd91d1c540803787f8684c3c85cbbaf"><span>Cash</span><b>0x36ef7ae7…</b></a><a class="tx" href="https://explorer.test.mezo.org/tx/0x944bf6339b6bc7743b7a63f6ff729faf1eb6cc0b1553fe49350a5d88660ccbf9"><span>Refund</span><b>0x944bf633…</b></a></td></tr>
-    <tr class="key"><td>sMUSD VaultGauge</td><td><code>deposit(amount, recipient)</code></td><td>Staked shares, the default, sit in the friend’s own name and earn MEZO</td><td><a class="tx" href="https://explorer.test.mezo.org/tx/0x07fd18c90055512dfe568f7287af9759fd43ed0e9f2c8743103039b3847bf892"><span>Staked claim</span><b>0x07fd18c9…</b></a></td></tr>
+    <tr class="key"><td>sMUSD VaultGauge</td><td><code>deposit(amount, recipient)</code></td><td>Staked shares, the default, sit in the friend’s own name and earn MEZO</td><td><a class="tx" href="https://explorer.mezo.org/tx/0x15e18226f084c4da4800b0df9ab6c658f1dfff435d8bde14afa2692bdafb62fd"><span>Mainnet staked claim</span><b>0x15e18226…</b></a></td></tr>
     <tr><td>Pools Voter</td><td><code>isAlive(gauge)</code></td><td>Fall back to plain sMUSD if the gauge is killed</td><td><span class="by-app">checked in every staked claim</span></td></tr>
     <tr><td>Tigris Router + MUSD PriceFeed</td><td><code>swapExactTokensForTokens · fetchPrice</code></td><td>Fund with BTC at the oracle price; a stale price reverts</td><td><a class="tx" href="https://explorer.test.mezo.org/tx/0xe4ea1f61eecab228af326865cb7a6d47809256e09d1eaba1e96e5c853a8af345"><span>BTC packet</span><b>0xe4ea1f61…</b></a></td></tr>
     <tr><td>BorrowerOperations, TroveManager, HintHelpers, SortedTroves</td><td><code>withdrawMUSD · getCurrentICR · getTroveMaxBorrowingCapacity · hints</code></td><td>Send straight from your Mezo loan, with ICR and Recovery Mode checks</td><td><a class="tx" href="https://explorer.test.mezo.org/tx/0x784ea30adab5f3b697d657887e3844b29fddff1f3916cf9b22078c622716818e"><span>withdrawMUSD</span><b>0x784ea30a…</b></a></td></tr>
@@ -331,8 +331,8 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
 <!-- 7 · traction (filled from docs/proof.json and /api/stats) -->
 <section class="slide traction">
   <div class="kicker">Traction · public ledger</div>
-  <h2>Live on Mezo testnet. All three payouts proven on-chain.</h2><div class="row-label"><span class="tag">Mezo testnet</span><span>Team test wallets, tagged on the public ledger</span></div><div class="stats4"><div class="stat "><div class="big">5</div><div class="stat-label">packets</div><div class="stat-note">3 with MUSD, 1 with BTC, 1 from a Mezo loan</div></div><div class="stat "><div class="big">6</div><div class="stat-label">claims</div><div class="stat-note">4 staked · 1 saved · 1 cash</div></div><div class="stat "><div class="big">126.41</div><div class="stat-label">MUSD into packets</div><div class="stat-note">parked as sMUSD until claimed</div></div><div class="stat "><div class="big">1</div><div class="stat-label">refund</div><div class="stat-note">back to the sender</div></div></div><div class="callout"><div class="callout-head">Open to anyone on Mezo testnet</div><div class="callout-body">Every outside packet and claim shows up live, tagged team or outside: <a href="https://hongbao-mezo.pages.dev/ledger">hongbao-mezo.pages.dev/ledger</a></div></div>
-  <div class="foot"><a href="https://github.com/tedinroc/hongbao/blob/main/docs/PROOF.md">Source: docs/PROOF.md, Nov 12, 2026; matches live /api/stats, Nov 12, 2026</a><span class="pn">07 / 12</span></div>
+  <h2>3 wallets outside the team opened a packet.</h2><div class="row-label"><span class="tag">Mezo mainnet</span><span>Outside = not in the team wallet list</span></div><div class="stats4"><div class="stat hot"><div class="big">3</div><div class="stat-label">outside recipients</div><div class="stat-note">of 3 in all</div></div><div class="stat "><div class="big">3</div><div class="stat-label">packets</div><div class="stat-note">sent by the team, funded with MUSD</div></div><div class="stat "><div class="big">3</div><div class="stat-label">claims</div><div class="stat-note">3 staked</div></div><div class="stat "><div class="big">38.81</div><div class="stat-label">MUSD into packets</div><div class="stat-note">all wallets, parked as sMUSD until claimed</div></div></div><div class="callout"><div class="callout-head">Every packet and claim is public</div><div class="callout-body">Tagged team or outside, with explorer links: <a href="https://hongbao.trytry.net/ledger">hongbao.trytry.net/ledger</a></div></div><p class="fine">Mezo testnet (team test runs, every funding path and payout): 6 packets, 7 claims, 128.39 MUSD.</p>
+  <div class="foot"><a href="https://github.com/tedinroc/hongbao/blob/main/docs/PROOF.md">Source: docs/PROOF.md, matches live /api/stats as of Nov 14, 2026 14:52 UTC</a><span class="pn">07 / 12</span></div>
 </section>
 
 <!-- 8 · business model -->
@@ -345,7 +345,7 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
     <div class="card"><div class="big word">Float</div><h3>Savings yield</h3><p>Unclaimed packets earn the MUSD savings rate for the treasury.</p></div>
     <div class="card"><div class="big word">Tips</div><h3>Self-paying relays</h3><p>Each share carries a tiny BTC tip that pays whoever relays the claim. No gas subsidy.</p></div>
   </div>
-  <div class="next"><span class="tag">PER FRIEND</span><p>Landing one friend in Mezo savings costs 1% of their share plus a <span class="mono">0.000004</span> BTC gas kit by default: <span class="mono">0.000003</span> for their own gas, <span class="mono">0.000001</span> for the relay.</p></div>
+  <div class="next"><span class="tag">PER FRIEND</span><p>Landing one friend in Mezo savings costs a 1% fee plus a <span class="mono">0.000004</span> BTC gas kit by default: <span class="mono">0.000003</span> for their own gas, <span class="mono">0.000001</span> for the relay.</p></div>
   <div class="foot"><span>Hongbao 紅包</span><span class="pn">08 / 12</span></div>
 </section>
 
@@ -362,12 +362,12 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
     </ul>
     <div class="proofs">
       <div class="proof"><div class="big">28</div><p>contract tests incl. fuzz: every MUSD is paid out or refunded</p></div>
-      <div class="proof"><div class="big">107</div><p>app tests, plus full runs on a Mezo testnet fork</p></div>
+      <div class="proof"><div class="big">116</div><p>app tests, plus full runs on a Mezo testnet fork</p></div>
       <div class="proof"><div class="big">3</div><p>AI-assisted review passes; every confirmed issue fixed or documented</p></div>
-      <div class="proof"><div class="big word">Verified</div><p>contract source, on the Mezo testnet explorer</p></div>
+      <div class="proof"><div class="big word">Verified</div><p>contract source, on the Mezo mainnet and testnet explorers</p></div>
     </div>
   </div>
-  <div class="caps"><span class="tag">AT MAINNET LAUNCH</span><span>Beta caps: <span class="mono">50</span> MUSD per packet · <span class="mono">100</span> open per sender · <span class="mono">500</span> open in total</span></div>
+  <div class="caps"><span class="tag">MAINNET BETA · LIVE</span><span>Beta caps: <span class="mono">50</span> MUSD per packet · <span class="mono">100</span> open per sender · <span class="mono">500</span> open in total</span></div>
   <div class="foot"><span>Hongbao 紅包</span><span class="pn">09 / 12</span></div>
 </section>
 
@@ -376,7 +376,7 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
   <div class="kicker">Roadmap · next 3 months</div>
   <h2>From buildathon to Lunar New Year.</h2>
   <div class="timeline">
-    <div class="tl"><div class="tl-when">DEC 2026</div><h3>Mainnet public beta</h3><p>Capped beta on Mezo mainnet, a Telegram bot that posts a live packet card into the chat, and an external review.</p><div class="goal">Goal: 200+ distinct recipients</div></div>
+    <div class="tl"><div class="tl-when">DEC 2026</div><h3>Grow the mainnet beta</h3><p>Capped beta live since Nov 13. Next: a Telegram bot that posts a live packet card into the chat, and an external review.</p><div class="goal">Goal: 200+ distinct recipients</div></div>
     <div class="tl hot"><div class="tl-when">JAN 2027</div><h3>Lunar New Year campaign</h3><p>Review published, caps raised within the hard limits. Themes, scheduled and community packets, ready for Feb 6, 2027.</p><div class="goal">Goal: 1,000+ recipients</div></div>
     <div class="tl"><div class="tl-when">FEB 2027</div><h3>Loan-funded packets in one transaction</h3><p>Borrow from your Mezo loan and fill a packet in a single step.</p></div>
   </div>
@@ -397,14 +397,15 @@ tr.key td:last-child{box-shadow:16px 0 0 0 #F7EBD3}
 <!-- 12 · links -->
 <section class="slide links">
   <div class="kicker">Try it</div>
-  <h2>Try it on Mezo testnet.</h2>
+  <h2>Live on Mezo mainnet.</h2>
   <div class="link-list two">
-    <div class="link-row"><div class="link-k">Demo video</div><div class="link-v"><a href="https://hongbao-mezo.pages.dev/video/">hongbao-mezo.pages.dev/video</a><span class="link-note">the product, start to finish</span></div></div>
-<div class="link-row"><div class="link-k">This deck</div><div class="link-v"><a href="https://hongbao-mezo.pages.dev/deck.pdf">hongbao-mezo.pages.dev/deck.pdf</a><span class="link-note">PDF with clickable links</span></div></div>
-    <div class="link-row"><div class="link-k">Live app</div><div class="link-v"><a href="https://hongbao-mezo.pages.dev">hongbao-mezo.pages.dev</a><span class="link-note">Mezo testnet · no wallet needed to open or claim</span></div></div>
-    <div class="link-row"><div class="link-k">Public ledger</div><div class="link-v"><a href="https://hongbao-mezo.pages.dev/ledger">hongbao-mezo.pages.dev/ledger</a><span class="link-note">every packet and claim, team wallets tagged</span></div></div>
+    <div class="link-row"><div class="link-k">Demo video</div><div class="link-v"><a href="https://youtu.be/1dhi0hyeWZ8">youtu.be/1dhi0hyeWZ8</a><span class="link-note">the product, start to finish</span></div></div>
+<div class="link-row"><div class="link-k">This deck</div><div class="link-v"><a href="https://hongbao.trytry.net/deck.pdf">hongbao.trytry.net/deck.pdf</a><span class="link-note">PDF with clickable links</span></div></div>
+    <div class="link-row"><div class="link-k">Live app</div><div class="link-v"><a href="https://hongbao.trytry.net">hongbao.trytry.net</a><span class="link-note">Mezo mainnet (capped beta) and testnet · no wallet needed to open or claim</span></div></div>
+    <div class="link-row"><div class="link-k">Public ledger</div><div class="link-v"><a href="https://hongbao.trytry.net/ledger">hongbao.trytry.net/ledger</a><span class="link-note">every packet and claim, team wallets tagged</span></div></div>
     <div class="link-row"><div class="link-k">Code</div><div class="link-v"><a href="https://github.com/tedinroc/hongbao">github.com/tedinroc/hongbao</a><span class="link-note">MIT · contracts, app, relayer and tests</span></div></div>
-    <div class="link-row"><div class="link-k">Contract</div><div class="link-v"><a class="mono addr" href="https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4">0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4</a><span class="link-note">Mezo testnet · source verified on explorer.test.mezo.org</span></div></div>
+    <div class="link-row"><div class="link-k">Contract</div><div class="link-v"><a class="mono addr" href="https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee">0x116ca33fB361497010a5AA0f1eA5368D304728Ee</a><span class="link-note">Mezo mainnet · source verified on explorer.mezo.org</span></div></div>
+<div class="link-row"><div class="link-k">Contract</div><div class="link-v"><a class="mono addr" href="https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4">0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4</a><span class="link-note">Mezo testnet · source verified on explorer.test.mezo.org</span></div></div>
   </div>
   <div class="foot"><span>Hongbao 紅包 · Mezo Buildathon Wave 2</span><span class="pn">12 / 12</span></div>
 </section>
