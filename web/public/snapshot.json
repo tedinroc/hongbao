@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-13T20:36:58.318Z",
+  "generatedAt": "2026-11-14T05:27:20.986Z",
   "note": "Build-time stats for the landing page. Replace with real numbers before a deploy; the page then refreshes from /api/stats.",
   "chains": {
     "31611": {
@@ -190,7 +190,7 @@
           }
         ],
         "fromBlock": 16730213,
-        "toBlock": 16761561
+        "toBlock": 16769221
       }
     },
     "31612": {
@@ -274,7 +274,7 @@
         ],
         "refunded": [],
         "fromBlock": 13190614,
-        "toBlock": 13207506
+        "toBlock": 13215889
       }
     }
   }

@@ -1,10 +1,10 @@
 # Hongbao on-chain evidence
 
-Generated 2026-11-13T20:36:30.621Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
+Generated 2026-11-14T03:03:54.246Z by `ops/proof.mjs` from public RPCs. Team wallets are listed in `config/team-wallets.json`; every other address is tagged outside.
 
 ## Mezo testnet
 
-Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16761556
+Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4aBD1a5C06737A67F4EEa8C3a6c4), blocks 16730213 to 16767152
 
 | | |
 |---|---|
@@ -47,7 +47,7 @@ Contract [0xf18a…a6c4](https://explorer.test.mezo.org/address/0xf18a5eC3e76d4a
 
 ## Mezo mainnet
 
-Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13207501
+Contract [0x116c…28Ee](https://explorer.mezo.org/address/0x116ca33fB361497010a5AA0f1eA5368D304728Ee), blocks 13190614 to 13213624
 
 | | |
 |---|---|
