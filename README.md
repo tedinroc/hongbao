@@ -1,6 +1,6 @@
 # Hongbao 紅包 — MUSD red packets that land in Mezo savings
 
-Send MUSD the way people already send money in group chats: as a red packet. One link in Telegram, WhatsApp or LINE; every friend who taps it gets an equal share **already staked in Mezo's sMUSD gauge in their own name**, plus a little BTC for gas. They need nothing beforehand: no wallet, no gas, no MUSD.
+Send MUSD the way people already send money in group chats: as a red packet. One link in Telegram, WhatsApp or LINE; every friend who taps it gets an equal share **staked in Mezo's sMUSD gauge in their own name by default**, plus a little BTC for gas. They need nothing beforehand: no wallet, no gas, no MUSD.
 
 Built for the [Mezo Buildathon](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D10), Track 2 (Access and distribution).
 
@@ -53,7 +53,7 @@ expiry ──refund──▶ unclaimed MUSD and unused gas back to the sender
 - Every packet is refundable by its sender at any time and by anyone (to the sender) after expiry. If the savings vault ever refuses a withdrawal, refunds and cash claims fall back to paying sMUSD in kind.
 - Native BTC goes out last under a reentrancy guard; recipients that refuse BTC can pull it later.
 - Claims are bound by EIP-712 to the recipient, the payout and the relayer, so a copied transaction can neither redirect the money nor take the relay tip.
-- Reviewed in three independent passes (funds and accounting, authorization, correctness against Mezo's verified sources); every confirmed finding is fixed and covered by a test. See [docs/SECURITY.md](docs/SECURITY.md).
+- Reviewed in three independent passes before deployment (funds and accounting, authorization, correctness against Mezo's verified sources) and once more after the mainnet deploy; every confirmed finding is fixed or documented. See [docs/SECURITY.md](docs/SECURITY.md).
 - Tests: `cd contracts && forge test` (28 unit, adversarial and fuzz tests, including a conservation fuzz: every MUSD is either paid out or refunded); `cd web && npm test` (116 tests); `scripts/e2e-fork.sh` runs the contract, relayer and app together on a fork of Mezo testnet.
 
 ## Repository

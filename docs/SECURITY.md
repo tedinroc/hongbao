@@ -34,6 +34,7 @@ There is no owner, no upgrade path and no admin withdrawal.
 ## Reviews
 
 - 2026-11-12: three independent AI-assisted review passes (funds and accounting; authorization and adversarial actors; correctness against Mezo's verified sources), each finding re-checked by a separate skeptical reviewer. Findings and fixes: see below.
+- 2026-11-13, after the mainnet deploy: an AI-assisted adversarial review of the live app, relayer and claim links. Result: someone watching the chain or the mempool cannot take a share. Fixed in 4c68c7c: Cloudflare could inject its analytics script into the page that holds the claim key (HTML is now served with `Cache-Control: no-transform`), and the send page could create a packet without a co-signer when one-per-person was on but the co-signer had not answered (now refused). Documented under trust assumptions: one-per-person is a speed bump, not proof of personhood.
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
@@ -50,6 +51,6 @@ There is no owner, no upgrade path and no admin withdrawal.
 | AUTH-M1 | Info (by design) | Whoever holds an open-mode link can claim every share from many addresses | Documented; one-per-person mode is the app default |
 | FUNDS-7 / MEZO-4 | Info | Savings yield on unclaimed money goes to the treasury; staked shares earn MEZO instead of savings interest | Documented in the app and README |
 
-Every Mezo call was also simulated read-only against live testnet and mainnet state, and every path has since run with real transactions on Mezo testnet (see [PROOF.md](PROOF.md)), including BTC funding through Mezo's BTC precompile, which a local fork cannot emulate.
+Every Mezo call was also simulated read-only against live testnet and mainnet state, and every funding path and payout has since run with real transactions on Mezo testnet (see [PROOF.md](PROOF.md)); the in-kind fallbacks and the stale-price revert are covered by Foundry tests and the Recovery Mode refusal by an app test, not by live transactions, including BTC funding through Mezo's BTC precompile, which a local fork cannot emulate.
 
 No external audit yet. Mainnet runs as a capped beta (50 MUSD per packet, 100 MUSD open per sender, 500 MUSD open in total; guardian can raise them only up to 100 / 500 / 5,000) until one is done.
